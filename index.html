@@ -1973,10 +1973,10 @@ input[type=range]{accent-color:var(--primary);cursor:pointer;}
       <!-- Contact -->
       <div class="contact-box">
         <div class="contact-box-title" data-i18n="modalContact">📬 Contact This Walker</div>
-        <label class="dog-upload-label" data-i18n="modalDogPhoto">Add a photo of your dog (optional)</label>
+        <label class="dog-upload-label" data-i18n="modalDogPhoto">📎 Attach a photo of <em>your</em> dog to send with your message (optional)</label>
         <div class="dog-upload-zone">
           <input type="file" accept="image/*" onchange="previewDogPhoto(this)">
-          <div class="dog-upload-hint">🐶 Tap to upload a photo of your dog</div>
+          <div class="dog-upload-hint">🐶 Tap to attach your dog's photo</div>
         </div>
         <img id="dog-preview">
         <div class="contact-btns" style="margin-top:12px">
@@ -2133,78 +2133,7 @@ const DAY_SHORT = { sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'
 /* ═══════════════════════════════════════════════════
    SEED WALKERS
 ═══════════════════════════════════════════════════ */
-const SEEDS = [
-  {
-    id:'seed_1', name:'Noa Shapiro',
-    email:'noa.shapiro@gmail.com', phone:'054-111-2233',
-    bio:'Passionate dog lover with 6 years of professional experience. I treat every dog with patience and care — specializing in anxious and reactive dogs. Each walk includes a post-walk update with photos.',
-    experience:6, certs:'Certified Professional Dog Trainer (CPDT-KA), Dog First Aid & CPR',
-    skills:'Reactive dogs, anxious temperaments, puppies, senior dogs',
-    languages:'Hebrew, English',
-    rate:65, rateUnit:'per hour', maxDogs:3,
-    photo:'', neighborhood:'Buchman',
-    lat:31.9010, lng:35.0050,
-    availability:{sun:true,mon:true,tue:true,wed:false,thu:true,fri:false,sat:false},
-    availNote:'Mornings 7am–12pm weekdays',
-    dogSizes:['small','medium'], rating:4.9, reviews:34
-  },
-  {
-    id:'seed_2', name:'Amit Ben-David',
-    email:'amit.bd@walla.com', phone:'052-987-6543',
-    bio:'Former IDF military dog handler with 8 years experience working with all breeds. Now running a professional dog walking business. All walks are GPS-tracked and I send live updates throughout.',
-    experience:8, certs:'IDF K9 Handler Certification, GPS Tracking Service',
-    skills:'Large & strong breeds, pullers, guard dogs, obedience reinforcement',
-    languages:'Hebrew',
-    rate:80, rateUnit:'per walk', maxDogs:2,
-    photo:'', neighborhood:'Heftziba',
-    lat:31.8950, lng:35.0160,
-    availability:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
-    availNote:'Afternoons preferred (1pm–6pm)',
-    dogSizes:['medium','large'], rating:5.0, reviews:22
-  },
-  {
-    id:'seed_3', name:'Yael Friedman',
-    email:'yael.walks@gmail.com', phone:'058-444-5566',
-    bio:'4th year veterinary student at Hebrew University. My medical background means your dog is in the safest possible hands. I can administer medication, spot health issues early, and handle any emergency.',
-    experience:3, certs:'Vet Student (Year 4, HUJI), Pet First Aid Certified',
-    skills:'Medication administration, health monitoring, puppies, senior & special-needs dogs',
-    languages:'Hebrew, English, French',
-    rate:55, rateUnit:'per hour', maxDogs:4,
-    photo:'', neighborhood:'Yuvali',
-    lat:31.9030, lng:35.0200,
-    availability:{sun:true,mon:false,tue:false,wed:true,thu:false,fri:true,sat:true},
-    availNote:'Available Sun, Wed, Fri–Sat only',
-    dogSizes:['small','medium','large'], rating:4.8, reviews:18
-  },
-  {
-    id:'seed_4', name:'Daniel Katz',
-    email:'dkatz.walks@gmail.com', phone:'050-777-8899',
-    bio:'Retired PE teacher turned full-time dog walker. I take small groups on long scenic hikes through Modi\'in\'s parks and forest trails. Your dog comes home genuinely happy and tired — guaranteed.',
-    experience:4, certs:'Hiking Guide License (Ministry of Tourism), Pet CPR',
-    skills:'Trail hiking, group walks, high-energy breeds, socialization training',
-    languages:'Hebrew, Russian',
-    rate:45, rateUnit:'per walk', maxDogs:5,
-    photo:'', neighborhood:'Maccabim',
-    lat:31.8900, lng:35.0020,
-    availability:{sun:true,mon:true,tue:true,wed:true,thu:true,fri:false,sat:false},
-    availNote:'Weekday mornings 6:30am–11am',
-    dogSizes:['small','medium','large'], rating:4.7, reviews:41
-  },
-  {
-    id:'seed_5', name:'Shira Levi',
-    email:'shira.dogwalker@outlook.com', phone:'053-222-3344',
-    bio:'Professional dog sitter and walker for 5 years, specializing in small and toy breeds. Fully insured. I send GPS updates every 30 minutes and photos during every walk. Flexible scheduling available.',
-    experience:5, certs:"Pet Sitters International (PSI) Member, Fully Insured",
-    skills:'Small & toy breeds, puppies, senior dogs, overnight pet sitting',
-    languages:'Hebrew, English',
-    rate:70, rateUnit:'per hour', maxDogs:3,
-    photo:'', neighborhood:"Re'ut",
-    lat:31.8870, lng:35.0130,
-    availability:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
-    availNote:'Mon–Fri 7am–6pm, some Saturday mornings',
-    dogSizes:['small'], rating:4.9, reviews:57
-  }
-];
+const SEEDS = [];
 
 /* ═══════════════════════════════════════════════════
    STORAGE — Supabase cloud database
