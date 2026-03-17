@@ -1969,8 +1969,59 @@ input[type=range]{accent-color:var(--primary);cursor:pointer;}
           </div>
         </div>
         <button class="login-btn" onclick="loginWalker()" data-i18n="loginBtn">Sign In →</button>
+        <div style="text-align:center;margin-top:12px;">
+          <button onclick="navigate('reset')" style="background:none;border:none;color:var(--primary-mid);font-size:0.83rem;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif;">Forgot your password?</button>
+        </div>
         <div class="login-divider">or</div>
         <button class="login-switch" onclick="navigate('signup')" data-i18n="loginSwitch">New here? Create a listing instead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     RESET PASSWORD
+══════════════════════════════════════════════ -->
+<div id="screen-reset" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-pill ghost" onclick="navigate('login')">← Back</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div class="login-wrap">
+      <div class="login-card">
+        <h2>🔒 Reset Password</h2>
+        <p class="login-sub">Enter your email and phone number to verify it's you, then choose a new password.</p>
+        <div id="reset-error" class="login-error"></div>
+        <div id="reset-success" style="display:none;background:#ECFDF5;border:1px solid #6EE7B7;color:#065F46;padding:12px 16px;border-radius:10px;font-size:0.85rem;margin-bottom:14px;"></div>
+        <div class="form-field">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" id="reset-email" type="email" placeholder="your@email.com">
+        </div>
+        <div class="form-field" style="margin-top:14px">
+          <label class="form-label">Phone Number (as entered on your profile)</label>
+          <input class="form-input" id="reset-phone" type="tel" placeholder="05X-XXX-XXXX">
+        </div>
+        <div class="form-field" style="margin-top:14px">
+          <label class="form-label">New Password</label>
+          <div class="pw-field">
+            <input class="form-input" id="reset-pw1" type="password" placeholder="Min. 6 characters">
+            <button class="pw-toggle" type="button" onclick="togglePw('reset-pw1',this)">👁</button>
+          </div>
+        </div>
+        <div class="form-field" style="margin-top:14px">
+          <label class="form-label">Confirm New Password</label>
+          <div class="pw-field">
+            <input class="form-input" id="reset-pw2" type="password" placeholder="Repeat new password">
+            <button class="pw-toggle" type="button" onclick="togglePw('reset-pw2',this)">👁</button>
+          </div>
+        </div>
+        <button class="login-btn" onclick="resetPassword()" style="margin-top:20px">Reset Password →</button>
       </div>
     </div>
   </div>
@@ -2627,6 +2678,57 @@ async function loginWalker() {
   document.getElementById('login-password').value = '';
   showToast('👋 Welcome back, ' + walker.name.split(' ')[0] + '!');
   navigate('dashboard');
+}
+
+async function resetPassword() {
+  const email  = document.getElementById('reset-email').value.trim().toLowerCase();
+  const phone  = document.getElementById('reset-phone').value.trim().replace(/\s/g,'');
+  const pw1    = document.getElementById('reset-pw1').value;
+  const pw2    = document.getElementById('reset-pw2').value;
+  const errEl  = document.getElementById('reset-error');
+  const okEl   = document.getElementById('reset-success');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!email || !phone || !pw1 || !pw2) {
+    errEl.textContent = '⚠️ Please fill in all fields.';
+    errEl.style.display = 'block'; return;
+  }
+  if (pw1.length < 6) {
+    errEl.textContent = '⚠️ Password must be at least 6 characters.';
+    errEl.style.display = 'block'; return;
+  }
+  if (pw1 !== pw2) {
+    errEl.textContent = '⚠️ Passwords do not match.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const fresh = await fetchWalkers();
+  if (fresh) S.walkers = fresh;
+
+  const walker = S.walkers.find(w => w.email.toLowerCase() === email);
+  if (!walker) {
+    errEl.textContent = '⚠️ No account found with that email.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const phoneClean = p => p.replace(/\D/g,'');
+  if (phoneClean(walker.phone || '') !== phoneClean(phone)) {
+    errEl.textContent = '⚠️ Phone number does not match. Please enter the phone number on your profile.';
+    errEl.style.display = 'block'; return;
+  }
+
+  walker.passwordHash = await hashPassword(pw1);
+  try {
+    await upsertWalker(walker);
+    S.walkers = S.walkers.map(w => w.id === walker.id ? walker : w);
+    document.getElementById('reset-pw1').value = '';
+    document.getElementById('reset-pw2').value = '';
+    okEl.textContent = '✅ Password reset! You can now sign in with your new password.';
+    okEl.style.display = 'block';
+  } catch(e) {
+    errEl.textContent = '⚠️ Could not save: ' + e.message;
+    errEl.style.display = 'block';
+  }
 }
 
 async function submitWalker() {
