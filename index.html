@@ -2262,8 +2262,10 @@ function navigate(screen) {
   S.screen = screen;
   window.scrollTo(0, 0);
   if (screen === 'map') {
-    setTimeout(initMap, 60);
-    fetchWalkers().then(w => { if (w) { S.walkers = w; if (S.map) renderMarkers(); } });
+    fetchWalkers().then(w => {
+      if (w) S.walkers = w;
+      setTimeout(() => { initMap(); }, 60);
+    }).catch(() => { setTimeout(() => { initMap(); }, 60); });
   }
   if (screen === 'dashboard') renderDashboard();
   // Clear login errors when navigating away
@@ -2656,18 +2658,19 @@ async function submitWalker() {
   const pw2   = document.getElementById('f-password2').value;
   const errEl = document.getElementById('form-error');
 
+  const isEditing = !!S.myId;
   // Validate required fields
-  if (!first || !last || !email || !bio || !rate || !hood || !pw) {
+  if (!first || !last || !email || !bio || !rate || !hood || (!pw && !isEditing)) {
     errEl.textContent = '⚠️ Please fill in all required fields marked with *';
     errEl.style.display = 'block';
     errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
   }
-  if (pw.length < 6) {
+  if (pw && pw.length < 6) {
     errEl.textContent = '⚠️ Password must be at least 6 characters.';
     errEl.style.display = 'block';
     errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
   }
-  if (!pw2 || pw !== pw2) {
+  if (pw && (!pw2 || pw !== pw2)) {
     errEl.textContent = '⚠️ Passwords do not match.';
     errEl.style.display = 'block';
     errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
@@ -2683,7 +2686,15 @@ async function submitWalker() {
 
   errEl.style.display = 'none';
 
-  const passwordHash = await hashPassword(pw);
+  let passwordHash;
+  if (pw) {
+    passwordHash = await hashPassword(pw);
+  } else if (isEditing) {
+    const existingW = S.walkers.find(w => w.id === S.myId);
+    passwordHash = existingW ? existingW.passwordHash : '';
+  } else {
+    passwordHash = '';
+  }
 
   let lat = parseFloat(document.getElementById('f-lat').value);
   let lng = parseFloat(document.getElementById('f-lng').value);
@@ -2795,7 +2806,12 @@ function editMyProfile() {
 
 async function removeListing() {
   if (!confirm('Remove your listing from the map? You can re-add it anytime.')) return;
-  await deleteWalker(S.myId);
+  try {
+    await deleteWalker(S.myId);
+  } catch(e) {
+    showToast('⚠️ Could not remove listing. Please try again.');
+    return;
+  }
   S.walkers = S.walkers.filter(w => w.id !== S.myId);
   S.myId = null;
   localStorage.removeItem('pawwalk_modiin_myId');
