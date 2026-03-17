@@ -1,0 +1,3021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PawWalk Modiin — Dog Walking in Modi'in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<style>
+/* ═══════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════ */
+:root {
+  --primary:        #1B4332;
+  --primary-mid:    #2D6A4F;
+  --primary-light:  #52B788;
+  --primary-pale:   #D8F3DC;
+  --gold:           #E9A825;
+  --gold-light:     #FDE68A;
+  --orange:         #F4814A;
+  --red:            #EF4444;
+  --bg:             #F7F8FA;
+  --surface:        #FFFFFF;
+  --border:         #E5E7EB;
+  --text:           #111827;
+  --text-2:         #374151;
+  --text-3:         #6B7280;
+  --text-4:         #9CA3AF;
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:      0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg:      0 20px 40px rgba(0,0,0,0.14), 0 8px 16px rgba(0,0,0,0.08);
+  --shadow-xl:      0 40px 80px rgba(0,0,0,0.20);
+  --radius-sm:      8px;
+  --radius-md:      12px;
+  --radius-lg:      18px;
+  --radius-xl:      24px;
+  --radius-full:    9999px;
+}
+/* ═══════════════════════════════════════════════════
+   ROLE THEMES
+═══════════════════════════════════════════════════ */
+body.role-owner {
+  --primary:       #1B3A6B;
+  --primary-mid:   #2563EB;
+  --primary-light: #60A5FA;
+  --primary-pale:  #DBEAFE;
+}
+body.role-walker {
+  --primary:       #1B4332;
+  --primary-mid:   #2D6A4F;
+  --primary-light: #52B788;
+  --primary-pale:  #D8F3DC;
+}
+
+/* ═══════════════════════════════════════════════════
+   LANGUAGE FAB
+═══════════════════════════════════════════════════ */
+#lang-fab {
+  position:fixed;bottom:24px;right:16px;z-index:5000;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:999px;
+  padding:8px 18px;
+  font-family:'Inter',sans-serif;
+  font-size:0.82rem;font-weight:700;
+  cursor:pointer;
+  box-shadow:var(--shadow-md);
+  color:var(--text-2);
+  transition:all 0.18s;
+  display:flex;align-items:center;gap:6px;
+}
+#lang-fab:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-1px);}
+
+/* ═══════════════════════════════════════════════════
+   RTL SUPPORT
+═══════════════════════════════════════════════════ */
+[dir="rtl"] .nav-actions{flex-direction:row-reverse;}
+[dir="rtl"] .gate-option{flex-direction:row-reverse;}
+[dir="rtl"] .resume-item{flex-direction:row-reverse;}
+[dir="rtl"] .popup-top{flex-direction:row-reverse;}
+[dir="rtl"] .modal-hero{flex-direction:row-reverse;}
+[dir="rtl"] .contact-btns{flex-direction:row-reverse;}
+[dir="rtl"] .role-card-arrow{direction:ltr;}
+[dir="rtl"] .resume-block-title::after{display:none;}
+[dir="rtl"] .form-section-header::after{display:none;}
+[dir="rtl"] .login-divider::before{right:0;left:auto;}
+[dir="rtl"] .login-divider::after{left:0;right:auto;}
+[dir="rtl"] #lang-fab{right:auto;left:16px;}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+.shk{font-size:0.72em;vertical-align:0.1em;font-weight:inherit;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+
+/* ═══════════════════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════════════════ */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ═══════════════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════════════ */
+.navbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:1000;
+  box-shadow:var(--shadow-sm);
+}
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.25rem;font-weight:800;
+  color:var(--primary);text-decoration:none;
+}
+.nav-logo-icon{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-light));
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+  box-shadow:0 2px 8px rgba(27,67,50,0.3);
+}
+.nav-logo-text em{color:var(--primary-light);font-style:normal;}
+.nav-actions{display:flex;align-items:center;gap:10px;}
+.nav-pill{
+  padding:8px 18px;
+  border-radius:var(--radius-full);
+  font-size:0.85rem;font-weight:600;
+  cursor:pointer;
+  transition:all 0.18s;
+  border:1.5px solid transparent;
+}
+.nav-pill.ghost{
+  background:transparent;
+  border-color:var(--border);
+  color:var(--text-2);
+}
+.nav-pill.ghost:hover{border-color:var(--primary);color:var(--primary);}
+.nav-pill.solid{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+.nav-pill.solid:hover{background:var(--primary-mid);box-shadow:0 4px 12px rgba(27,67,50,0.35);}
+.nav-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--primary-pale);
+  color:var(--primary);
+  font-size:0.72rem;font-weight:700;
+  padding:2px 8px;border-radius:var(--radius-full);
+  margin-left:6px;
+}
+
+/* ═══════════════════════════════════════════════════
+   LANDING
+═══════════════════════════════════════════════════ */
+#screen-landing{
+  background:var(--bg);
+  align-items:stretch;
+}
+.hero{
+  background:linear-gradient(135deg, var(--primary) 0%, #2D6A4F 45%, #40916C 100%);
+  padding:80px 24px 100px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.2);
+  backdrop-filter:blur(8px);
+  color:rgba(255,255,255,0.95);
+  font-size:0.78rem;font-weight:600;
+  padding:6px 14px;border-radius:var(--radius-full);
+  margin-bottom:24px;
+  letter-spacing:0.5px;
+}
+.hero h1{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:800;
+  color:#fff;
+  line-height:1.15;
+  margin-bottom:18px;
+  position:relative;
+}
+.hero h1 span{color:var(--gold);}
+.hero p{
+  font-size:1.05rem;
+  color:rgba(255,255,255,0.8);
+  max-width:480px;
+  line-height:1.6;
+  margin-bottom:44px;
+  position:relative;
+}
+.hero-cards{
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+  justify-content:center;
+  position:relative;
+  max-width:560px;
+  width:100%;
+}
+.role-card{
+  flex:1;min-width:220px;max-width:260px;
+  background:rgba(255,255,255,0.97);
+  border-radius:var(--radius-xl);
+  padding:28px 24px;
+  cursor:pointer;
+  transition:transform 0.2s, box-shadow 0.2s;
+  box-shadow:var(--shadow-lg);
+  border:2px solid transparent;
+  text-align:left;
+}
+.role-card:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-xl);
+  border-color:var(--primary-light);
+}
+.role-card-icon{
+  width:52px;height:52px;
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;
+  margin-bottom:16px;
+}
+.role-card-icon.owner{background:linear-gradient(135deg,#FDE68A,#F59E0B);}
+.role-card-icon.walker{background:linear-gradient(135deg,#BBF7D0,#10B981);}
+.role-card h3{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+.role-card p{font-size:0.82rem;color:var(--text-3);line-height:1.5;}
+.role-card-arrow{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-top:14px;font-size:0.82rem;font-weight:600;
+  color:var(--primary);
+}
+
+/* Stats strip */
+.stats-strip{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:20px 24px;
+  display:flex;
+  justify-content:center;
+  gap:40px;
+  flex-wrap:wrap;
+}
+.stat-item{text-align:center;}
+.stat-num{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.5rem;font-weight:800;
+  color:var(--primary);
+}
+.stat-label{font-size:0.78rem;color:var(--text-3);margin-top:2px;}
+
+/* Feature grid */
+.features{
+  padding:60px 24px;
+  max-width:900px;
+  margin:0 auto;
+  width:100%;
+}
+.features-title{
+  text-align:center;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.5rem;font-weight:800;
+  color:var(--text);
+  margin-bottom:8px;
+}
+.features-sub{text-align:center;color:var(--text-3);font-size:0.9rem;margin-bottom:40px;}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
+.feature-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  transition:box-shadow 0.18s, transform 0.18s;
+}
+.feature-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.feature-icon{font-size:1.8rem;margin-bottom:12px;}
+.feature-card h4{font-size:0.92rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+.feature-card p{font-size:0.8rem;color:var(--text-3);line-height:1.5;}
+
+/* Landing footer */
+.landing-footer{
+  background:var(--primary);
+  color:rgba(255,255,255,0.6);
+  text-align:center;
+  padding:24px;
+  font-size:0.8rem;
+  margin-top:auto;
+}
+.landing-footer strong{color:#fff;}
+
+/* ═══════════════════════════════════════════════════
+   MAP SCREEN
+═══════════════════════════════════════════════════ */
+#screen-map{flex-direction:column;height:100vh;}
+#screen-map.active{display:flex;}
+
+.filter-bar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:10px 20px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  z-index:900;
+  box-shadow:var(--shadow-sm);
+}
+.filter-section{display:flex;align-items:center;gap:6px;}
+.filter-divider{width:1px;height:24px;background:var(--border);margin:0 4px;flex-shrink:0;}
+.filter-label{font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+
+.day-pill{
+  padding:5px 11px;
+  border-radius:var(--radius-full);
+  border:1.5px solid var(--border);
+  background:transparent;
+  color:var(--text-2);
+  cursor:pointer;
+  font-size:0.75rem;font-weight:600;
+  transition:all 0.15s;
+}
+.day-pill:hover{border-color:var(--primary-light);color:var(--primary);}
+.day-pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+.rate-group{display:flex;align-items:center;gap:8px;}
+.rate-value{
+  font-size:0.78rem;font-weight:700;
+  color:var(--primary);
+  background:var(--primary-pale);
+  padding:3px 8px;border-radius:var(--radius-full);
+  min-width:54px;text-align:center;
+}
+input[type=range]{accent-color:var(--primary);cursor:pointer;}
+
+.size-group{display:flex;gap:5px;}
+.size-toggle{
+  padding:5px 10px;
+  border-radius:var(--radius-full);
+  border:1.5px solid var(--border);
+  background:transparent;
+  color:var(--text-2);
+  cursor:pointer;
+  font-size:0.74rem;font-weight:600;
+  transition:all 0.15s;
+}
+.size-toggle:hover{border-color:var(--primary-light);}
+.size-toggle.active{background:var(--primary-pale);color:var(--primary);border-color:var(--primary-light);}
+
+.filter-count{
+  background:var(--gold-light);
+  color:#92400E;
+  font-size:0.72rem;font-weight:700;
+  padding:3px 9px;border-radius:var(--radius-full);
+  white-space:nowrap;
+}
+.reset-filter-btn{
+  margin-left:auto;
+  padding:6px 14px;
+  border-radius:var(--radius-full);
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  color:var(--text-3);
+  font-size:0.75rem;font-weight:600;
+  cursor:pointer;
+  transition:all 0.15s;
+  flex-shrink:0;
+}
+.reset-filter-btn:hover{border-color:var(--red);color:var(--red);}
+
+#map{flex:1;min-height:0;}
+
+/* ═══════════════════════════════════════════════════
+   POPUP
+═══════════════════════════════════════════════════ */
+.leaflet-popup-content-wrapper{
+  border-radius:16px !important;
+  padding:0 !important;
+  overflow:hidden;
+  box-shadow:var(--shadow-lg) !important;
+  border:1px solid var(--border) !important;
+}
+.leaflet-popup-content{margin:0 !important;width:auto !important;}
+.leaflet-popup-tip-container{margin-top:-1px;}
+
+.popup{font-family:'Inter',sans-serif;width:280px;}
+.popup-top{
+  padding:16px;
+  display:flex;gap:12px;
+  border-bottom:1px solid var(--border);
+  align-items:flex-start;
+}
+.popup-avatar{
+  width:56px;height:56px;border-radius:12px;
+  object-fit:cover;flex-shrink:0;
+  border:2px solid var(--primary-pale);
+}
+.popup-avatar-placeholder{
+  width:56px;height:56px;border-radius:12px;
+  background:linear-gradient(135deg,var(--primary-pale),var(--primary-light));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;flex-shrink:0;
+}
+.popup-info{flex:1;min-width:0;}
+.popup-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.popup-name{font-size:0.95rem;font-weight:700;color:var(--text);}
+.verified-badge{
+  display:inline-flex;align-items:center;gap:2px;
+  background:#ECFDF5;color:#065F46;
+  font-size:0.66rem;font-weight:700;
+  padding:2px 7px;border-radius:var(--radius-full);
+  border:1px solid #A7F3D0;
+}
+.popup-rate{font-size:0.82rem;font-weight:600;color:var(--primary-mid);margin-top:2px;}
+.popup-loc{font-size:0.76rem;color:var(--text-3);margin-top:1px;}
+.popup-stars{display:flex;gap:1px;margin-top:3px;}
+.star{font-size:0.7rem;}
+
+.popup-body{padding:12px 16px;}
+.popup-bio{font-size:0.78rem;color:var(--text-2);line-height:1.45;margin-bottom:10px;}
+.popup-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.chip{
+  padding:3px 9px;border-radius:var(--radius-full);
+  font-size:0.7rem;font-weight:600;
+  background:var(--bg);border:1px solid var(--border);
+  color:var(--text-2);
+}
+.popup-avail{font-size:0.74rem;color:var(--text-3);margin-bottom:12px;}
+.popup-avail strong{color:var(--primary-mid);}
+.popup-actions{display:flex;gap:8px;}
+.popup-btn{
+  flex:1;padding:9px 12px;
+  border-radius:var(--radius-md);border:none;
+  cursor:pointer;font-size:0.78rem;font-weight:700;
+  font-family:'Inter',sans-serif;
+  transition:all 0.15s;
+}
+.popup-btn.primary{background:var(--primary);color:#fff;}
+.popup-btn.primary:hover{background:var(--primary-mid);box-shadow:0 4px 10px rgba(27,67,50,0.3);}
+.popup-btn.outline{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+.popup-btn.outline:hover{background:var(--primary-pale);}
+
+/* ═══════════════════════════════════════════════════
+   MODAL — RESUME
+═══════════════════════════════════════════════════ */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(15,23,42,0.6);
+  z-index:2000;
+  align-items:flex-end;
+  justify-content:center;
+  padding:0;
+  backdrop-filter:blur(4px);
+}
+.overlay.open{display:flex;}
+@media(min-width:640px){
+  .overlay{align-items:center;padding:20px;}
+}
+/* On mobile the overlay bottom-sheet gets 2px side breathing room */
+@media(max-width:639px){
+  .overlay{padding:0 2px 0;}
+}
+.modal{
+  background:var(--surface);
+  width:100%;max-width:560px;
+  border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+  max-height:92vh;
+  overflow-y:auto;
+  box-shadow:var(--shadow-xl);
+  animation:sheetUp 0.3s cubic-bezier(0.34,1.26,0.64,1);
+  position:relative;
+}
+@media(min-width:640px){
+  .modal{border-radius:var(--radius-xl);animation:fadeUp 0.25s ease;}
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.modal-drag-handle{
+  width:40px;height:4px;
+  background:var(--border);border-radius:var(--radius-full);
+  margin:12px auto 0;
+}
+@media(min-width:640px){.modal-drag-handle{display:none;}}
+
+.modal-hero{
+  background:linear-gradient(135deg,var(--primary) 0%,var(--primary-mid) 100%);
+  padding:28px 24px 24px;
+  display:flex;gap:18px;align-items:center;
+}
+.modal-avatar{
+  width:80px;height:80px;border-radius:18px;
+  object-fit:cover;
+  border:3px solid rgba(255,255,255,0.3);
+  flex-shrink:0;
+}
+.modal-avatar-placeholder{
+  width:80px;height:80px;border-radius:18px;
+  background:rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.2rem;flex-shrink:0;
+  border:3px solid rgba(255,255,255,0.2);
+}
+.modal-hero-info{flex:1;}
+.modal-hero-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:var(--radius-full);
+  font-size:0.69rem;font-weight:700;
+  background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.25);
+  color:rgba(255,255,255,0.95);
+}
+.modal-hero-name{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.3rem;font-weight:800;color:#fff;
+}
+.modal-hero-sub{font-size:0.85rem;color:rgba(255,255,255,0.75);margin-top:4px;}
+.modal-hero-stars{display:flex;gap:2px;margin-top:6px;align-items:center;}
+.modal-hero-stars span{font-size:0.78rem;color:rgba(255,255,255,0.7);margin-left:6px;}
+
+.modal-content{padding:24px;}
+
+.resume-block{margin-bottom:24px;}
+.resume-block-title{
+  font-size:0.69rem;font-weight:800;
+  color:var(--text-3);
+  text-transform:uppercase;letter-spacing:1.2px;
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.resume-block-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.bio-text{
+  font-size:0.88rem;color:var(--text-2);
+  line-height:1.65;
+  background:var(--bg);
+  border-radius:var(--radius-md);
+  padding:14px;
+}
+
+.resume-items{display:flex;flex-direction:column;gap:10px;}
+.resume-item{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--bg);
+  border-radius:var(--radius-md);
+  padding:12px 14px;
+}
+.ri-icon{
+  width:34px;height:34px;
+  border-radius:var(--radius-sm);
+  background:var(--primary-pale);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;flex-shrink:0;
+}
+.ri-label{font-size:0.7rem;font-weight:600;color:var(--text-3);margin-bottom:2px;}
+.ri-value{font-size:0.88rem;font-weight:500;color:var(--text);}
+
+.service-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.service-tile{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:14px;
+}
+.service-tile-label{font-size:0.7rem;font-weight:600;color:var(--text-3);margin-bottom:4px;}
+.service-tile-value{font-size:0.95rem;font-weight:700;color:var(--text);}
+
+.size-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.size-badge{
+  padding:5px 12px;border-radius:var(--radius-full);
+  font-size:0.78rem;font-weight:600;
+  background:var(--primary-pale);color:var(--primary);
+  border:1px solid rgba(82,183,136,0.3);
+}
+
+.avail-row{display:flex;gap:6px;flex-wrap:wrap;}
+.avail-day{
+  width:40px;height:40px;
+  border-radius:var(--radius-sm);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:0.65rem;font-weight:700;
+  gap:1px;
+}
+.avail-day.yes{background:var(--primary-pale);color:var(--primary);}
+.avail-day.no{background:var(--bg);color:var(--text-4);text-decoration:line-through;}
+.avail-note{font-size:0.78rem;color:var(--text-3);margin-top:10px;font-style:italic;}
+
+/* Contact box in modal */
+.contact-box{
+  background:linear-gradient(135deg,#ECFDF5,#D1FAE5);
+  border:1px solid #A7F3D0;
+  border-radius:var(--radius-lg);
+  padding:20px;
+  margin-bottom:16px;
+}
+.contact-box-title{font-size:0.85rem;font-weight:700;color:var(--primary);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.dog-upload-label{font-size:0.78rem;font-weight:600;color:var(--text-2);margin-bottom:8px;display:block;}
+.dog-upload-zone{
+  border:2px dashed #6EE7B7;
+  border-radius:var(--radius-md);
+  padding:16px;
+  text-align:center;
+  background:#fff;
+  cursor:pointer;
+  position:relative;
+  transition:border-color 0.2s;
+  margin-bottom:12px;
+}
+.dog-upload-zone:hover{border-color:var(--primary-light);}
+.dog-upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.dog-upload-hint{font-size:0.78rem;color:var(--text-3);}
+#dog-preview{
+  width:72px;height:72px;border-radius:10px;
+  object-fit:cover;display:none;
+  margin:8px auto 0;border:2px solid var(--primary-pale);
+}
+.contact-btns{display:flex;gap:10px;}
+.contact-btn{
+  flex:1;padding:13px;
+  border-radius:var(--radius-md);border:none;
+  cursor:pointer;font-size:0.85rem;font-weight:700;
+  font-family:'Inter',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all 0.18s;
+}
+.contact-btn.email{background:var(--primary);color:#fff;}
+.contact-btn.email:hover{background:var(--primary-mid);box-shadow:0 4px 12px rgba(27,67,50,0.3);}
+.contact-btn.whatsapp{background:#25D366;color:#fff;}
+.contact-btn.whatsapp:hover{background:#1da851;box-shadow:0 4px 12px rgba(37,211,102,0.3);}
+.modal-close{
+  width:100%;padding:12px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  color:var(--text-3);
+  cursor:pointer;font-size:0.85rem;font-weight:600;
+  font-family:'Inter',sans-serif;
+  transition:all 0.15s;
+}
+.modal-close:hover{border-color:var(--text-3);color:var(--text);}
+
+/* ═══════════════════════════════════════════════════
+   SIGNUP FORM
+═══════════════════════════════════════════════════ */
+#screen-signup{overflow-y:auto;background:var(--bg);}
+.form-wrap{max-width:620px;width:100%;margin:0 auto;padding:32px 20px 80px;}
+
+.form-progress{
+  display:flex;gap:6px;margin-bottom:28px;align-items:center;
+}
+.progress-step{
+  height:4px;flex:1;border-radius:var(--radius-full);
+  background:var(--border);
+  transition:background 0.3s;
+}
+.progress-step.done{background:var(--primary-light);}
+.progress-step.active{background:var(--primary);}
+.progress-label{font-size:0.75rem;font-weight:600;color:var(--text-3);margin-left:8px;white-space:nowrap;}
+
+.form-page-title{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.5rem;font-weight:800;
+  color:var(--text);margin-bottom:4px;
+}
+.form-page-sub{font-size:0.88rem;color:var(--text-3);margin-bottom:28px;}
+
+.form-section{
+  background:var(--surface);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  margin-bottom:16px;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+}
+.form-section-header{
+  font-size:0.72rem;font-weight:800;
+  color:var(--text-3);
+  text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;
+}
+.form-section-header::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.form-row{display:flex;gap:14px;}
+.form-col{flex:1;min-width:0;}
+.form-field{margin-bottom:16px;}
+.form-field:last-child{margin-bottom:0;}
+.form-label{
+  display:block;
+  font-size:0.8rem;font-weight:600;
+  color:var(--text-2);
+  margin-bottom:6px;
+}
+.form-label .req{color:var(--orange);}
+.form-input,
+.form-select,
+.form-textarea{
+  width:100%;
+  padding:10px 14px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--bg);
+  font-size:0.88rem;color:var(--text);
+  font-family:'Inter',sans-serif;
+  transition:border-color 0.18s, background 0.18s;
+  outline:none;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus{
+  border-color:var(--primary-light);
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(82,183,136,0.12);
+}
+.form-textarea{resize:vertical;min-height:100px;line-height:1.55;}
+.form-hint{font-size:0.73rem;color:var(--text-4);margin-top:5px;}
+
+/* Photo upload */
+.photo-zone{
+  border:2px dashed var(--border);
+  border-radius:var(--radius-lg);
+  padding:28px;
+  text-align:center;
+  background:var(--bg);
+  cursor:pointer;
+  position:relative;
+  transition:border-color 0.2s, background 0.2s;
+}
+.photo-zone:hover{border-color:var(--primary-light);background:#fff;}
+.photo-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.photo-zone-icon{font-size:2.2rem;margin-bottom:8px;}
+.photo-zone-text{font-size:0.82rem;font-weight:500;color:var(--text-2);}
+.photo-zone-hint{font-size:0.74rem;color:var(--text-4);margin-top:4px;}
+#profile-preview{
+  width:90px;height:90px;border-radius:50%;object-fit:cover;
+  border:3px solid var(--primary);display:none;margin:12px auto 0;
+}
+
+/* Day picker */
+.day-picker{display:flex;gap:6px;flex-wrap:wrap;}
+.day-pick-label{cursor:pointer;}
+.day-pick-label input{display:none;}
+.day-pick-box{
+  width:46px;height:46px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:0.68rem;font-weight:700;
+  color:var(--text-3);
+  transition:all 0.15s;
+  user-select:none;
+}
+.day-pick-label input:checked + .day-pick-box{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(27,67,50,0.3);
+}
+
+/* Size picker */
+.size-picker{display:flex;gap:8px;}
+.size-pick-label{cursor:pointer;flex:1;}
+.size-pick-label input{display:none;}
+.size-pick-box{
+  padding:10px 8px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--bg);
+  text-align:center;
+  font-size:0.75rem;font-weight:600;
+  color:var(--text-3);
+  transition:all 0.15s;
+  user-select:none;
+}
+.size-pick-label input:checked + .size-pick-box{
+  background:var(--primary-pale);
+  border-color:var(--primary-light);
+  color:var(--primary);
+}
+
+/* Location */
+.location-row{display:flex;gap:10px;align-items:flex-end;}
+.gps-btn{
+  padding:10px 14px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--surface);color:var(--text-2);
+  cursor:pointer;font-size:0.8rem;font-weight:600;
+  font-family:'Inter',sans-serif;
+  white-space:nowrap;flex-shrink:0;
+  transition:all 0.15s;
+}
+.gps-btn:hover{border-color:var(--primary);color:var(--primary);}
+.loc-status{font-size:0.75rem;margin-top:6px;}
+.loc-status.ok{color:var(--primary-mid);}
+.loc-status.err{color:var(--red);}
+
+/* Submit */
+.submit-section{background:var(--surface);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border);}
+.submit-btn{
+  width:100%;padding:15px;
+  border-radius:var(--radius-md);border:none;
+  background:linear-gradient(135deg,var(--primary) 0%,var(--primary-mid) 100%);
+  color:#fff;font-size:0.95rem;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif;
+  box-shadow:0 4px 14px rgba(27,67,50,0.35);
+  transition:all 0.18s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(27,67,50,0.4);}
+.submit-note{font-size:0.74rem;color:var(--text-3);text-align:center;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:4px;}
+.form-error{
+  display:none;
+  background:#FEF2F2;border:1px solid #FECACA;
+  color:#991B1B;font-size:0.8rem;
+  border-radius:var(--radius-md);padding:10px 14px;
+  margin-bottom:16px;
+}
+
+/* ═══════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════ */
+#screen-dashboard{overflow-y:auto;background:var(--bg);}
+.dash-wrap{max-width:500px;width:100%;margin:0 auto;padding:32px 20px 60px;}
+
+.profile-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+  box-shadow:var(--shadow-md);
+  margin-bottom:16px;
+}
+.profile-banner{
+  height:90px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-mid),var(--primary-light));
+  position:relative;
+}
+.profile-avatar-wrap{
+  position:absolute;bottom:-36px;left:24px;
+}
+.profile-avatar{
+  width:72px;height:72px;border-radius:18px;
+  object-fit:cover;
+  border:4px solid var(--surface);
+  box-shadow:var(--shadow-md);
+  display:none;
+}
+.profile-avatar-placeholder{
+  width:72px;height:72px;border-radius:18px;
+  background:var(--primary-pale);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;
+  border:4px solid var(--surface);
+  box-shadow:var(--shadow-md);
+}
+.profile-body{padding:52px 24px 24px;}
+.profile-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.2rem;font-weight:800;color:var(--text);}
+.profile-meta{font-size:0.82rem;color:var(--text-3);margin-top:3px;}
+.profile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.p-badge{
+  padding:4px 10px;border-radius:var(--radius-full);
+  font-size:0.72rem;font-weight:700;
+  background:var(--primary-pale);color:var(--primary);
+}
+.profile-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);
+  border-radius:var(--radius-md);
+  overflow:hidden;margin-top:20px;
+}
+.profile-stat{
+  background:var(--bg);
+  padding:14px 12px;
+  text-align:center;
+}
+.profile-stat-num{font-size:1.1rem;font-weight:800;color:var(--primary);}
+.profile-stat-label{font-size:0.68rem;color:var(--text-3);margin-top:2px;font-weight:500;}
+
+.action-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:20px;
+  box-shadow:var(--shadow-sm);
+}
+.action-card h3{font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:14px;}
+.action-btns{display:flex;flex-direction:column;gap:10px;}
+.action-btn{
+  padding:13px 18px;
+  border-radius:var(--radius-md);border:none;
+  cursor:pointer;font-size:0.88rem;font-weight:700;
+  font-family:'Inter',sans-serif;
+  display:flex;align-items:center;gap:10px;
+  transition:all 0.18s;
+  text-align:left;
+}
+.action-btn:hover{transform:translateX(2px);}
+.action-btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;box-shadow:0 2px 8px rgba(27,67,50,0.25);}
+.action-btn.secondary{background:var(--bg);color:var(--text-2);border:1.5px solid var(--border);}
+.action-btn.secondary:hover{border-color:var(--primary-light);color:var(--primary);}
+.action-btn.danger{background:#FEF2F2;color:var(--red);border:1.5px solid #FECACA;}
+.action-btn.danger:hover{background:#FEE2E2;border-color:var(--red);}
+.action-btn-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════════════
+   WALKER GATE + LOGIN
+═══════════════════════════════════════════════════ */
+#screen-walker-gate{align-items:center;justify-content:center;background:var(--bg);}
+.gate-card{
+  background:var(--surface);
+  border-radius:var(--radius-xl);
+  padding:40px 32px;
+  max-width:460px;width:90%;
+  box-shadow:var(--shadow-lg);
+  border:1px solid var(--border);
+  text-align:center;
+}
+.gate-icon{font-size:3rem;margin-bottom:16px;}
+.gate-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:6px;}
+.gate-sub{font-size:0.88rem;color:var(--text-3);margin-bottom:32px;line-height:1.5;}
+.gate-options{display:flex;flex-direction:column;gap:12px;}
+.gate-option{
+  padding:18px 20px;
+  border-radius:var(--radius-lg);
+  border:2px solid var(--border);
+  background:var(--bg);
+  cursor:pointer;
+  text-align:left;
+  display:flex;align-items:center;gap:16px;
+  transition:all 0.18s;
+  font-family:'Inter',sans-serif;
+}
+.gate-option:hover{border-color:var(--primary-light);background:#fff;box-shadow:var(--shadow-md);}
+.gate-option.primary-opt{background:linear-gradient(135deg,var(--primary),var(--primary-mid));border-color:transparent;color:#fff;}
+.gate-option.primary-opt:hover{box-shadow:0 8px 24px rgba(27,67,50,0.35);transform:translateY(-1px);}
+.gate-opt-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+.gate-option.primary-opt .gate-opt-icon{background:rgba(255,255,255,0.18);}
+.gate-option:not(.primary-opt) .gate-opt-icon{background:var(--primary-pale);}
+.gate-opt-text h4{font-size:0.95rem;font-weight:700;margin-bottom:2px;}
+.gate-option.primary-opt .gate-opt-text h4{color:#fff;}
+.gate-option:not(.primary-opt) .gate-opt-text h4{color:var(--text);}
+.gate-opt-text p{font-size:0.78rem;opacity:0.75;}
+
+#screen-login{align-items:center;justify-content:center;background:var(--bg);}
+.login-wrap{max-width:420px;width:90%;padding:30px 0 60px;}
+.login-card{
+  background:var(--surface);
+  border-radius:var(--radius-xl);
+  padding:36px 32px;
+  box-shadow:var(--shadow-lg);
+  border:1px solid var(--border);
+}
+.login-card h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+.login-card .login-sub{font-size:0.85rem;color:var(--text-3);margin-bottom:28px;}
+.login-error{
+  display:none;
+  background:#FEF2F2;border:1px solid #FECACA;
+  color:#991B1B;font-size:0.8rem;
+  border-radius:var(--radius-md);padding:10px 14px;
+  margin-bottom:16px;
+}
+.login-btn{
+  width:100%;padding:14px;
+  border-radius:var(--radius-md);border:none;
+  background:linear-gradient(135deg,var(--primary),var(--primary-mid));
+  color:#fff;font-size:0.92rem;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif;
+  box-shadow:0 4px 14px rgba(27,67,50,0.3);
+  transition:all 0.18s;
+  margin-top:8px;
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(27,67,50,0.4);}
+.login-divider{text-align:center;font-size:0.78rem;color:var(--text-4);margin:16px 0;position:relative;}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
+.login-divider::before{left:0;} .login-divider::after{right:0;}
+.login-switch{
+  width:100%;padding:12px;
+  border-radius:var(--radius-md);
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  color:var(--text-2);font-size:0.85rem;font-weight:600;
+  cursor:pointer;font-family:'Inter',sans-serif;
+  transition:all 0.15s;
+}
+.login-switch:hover{border-color:var(--primary-light);color:var(--primary);}
+
+.pw-field{position:relative;}
+.pw-field .form-input{padding-right:44px;}
+.pw-toggle{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;
+  font-size:1rem;color:var(--text-3);padding:4px;
+  line-height:1;
+}
+
+/* ═══════════════════════════════════════════════════
+   CLUSTER ICON
+═══════════════════════════════════════════════════ */
+.cluster-icon {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 12px rgba(27,67,50,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cluster-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 18px rgba(27,67,50,0.55);
+}
+.cluster-icon span {
+  font-size: 0.48rem;
+  font-weight: 600;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* ═══════════════════════════════════════════════════
+   MAP MARKER
+═══════════════════════════════════════════════════ */
+.map-pin{
+  display:flex;flex-direction:column;align-items:center;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));
+  cursor:pointer;
+  transition:filter 0.15s, transform 0.15s;
+}
+.map-pin:hover{filter:drop-shadow(0 4px 10px rgba(0,0,0,0.4));transform:scale(1.12);}
+.map-pin-head{
+  width:38px;height:38px;
+  border-radius:50% 50% 50% 0;
+  transform:rotate(-45deg);
+  display:flex;align-items:center;justify-content:center;
+}
+.map-pin-head.green{background:linear-gradient(135deg,var(--primary),var(--primary-light));}
+.map-pin-head-inner{transform:rotate(45deg);font-size:1.15rem;}
+.map-pin-tail{
+  width:0;height:0;
+  border-left:5px solid transparent;
+  border-right:5px solid transparent;
+  border-top:8px solid var(--primary);
+  margin-top:-1px;
+}
+
+/* ═══════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(120px);
+  background:var(--text);color:#fff;
+  padding:12px 22px;border-radius:var(--radius-full);
+  font-size:0.84rem;font-weight:500;
+  z-index:9999;
+  transition:transform 0.3s cubic-bezier(0.34,1.26,0.64,1);
+  white-space:nowrap;
+  box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ═══════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   TABLET (max 768px)
+═══════════════════════════════════════════════════ */
+@media(max-width:768px){
+  .form-row{ flex-direction:column; }
+  .hero-cards{ flex-direction:column; align-items:center; }
+  .role-card{ max-width:100%; min-width:unset; width:100%; }
+  .service-grid{ grid-template-columns:1fr; }
+  .feature-grid{ grid-template-columns:1fr 1fr; }
+  .stats-strip{ gap:20px; flex-wrap:wrap; }
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE — full overhaul (max 480px)
+   Covers iPhone SE (375px) through iPhone Pro Max (430px)
+═══════════════════════════════════════════════════ */
+@media(max-width:480px){
+
+  /* ── CRITICAL: Prevent iOS auto-zoom on input focus ── */
+  /* iOS zooms if font-size < 16px. This fixes it globally. */
+  .form-input,
+  .form-select,
+  .form-textarea{ font-size:16px !important; }
+
+  /* ── BODY ── */
+  body{ font-size:15px; }
+
+  /* ── NAVBAR ── */
+  .navbar{ padding:0 12px; height:56px; }
+  .nav-logo-icon{ width:30px; height:30px; font-size:0.95rem; }
+  .nav-logo-text{ font-size:0.92rem; }
+  .nav-badge{ display:none; }
+  .nav-pill{ padding:8px 12px; font-size:0.8rem; min-height:38px; }
+
+  /* ── LANDING HERO ── */
+  .hero{ padding:40px 16px 56px; }
+  .hero-tag{ font-size:0.75rem; padding:5px 12px; }
+  .hero h1{ font-size:1.65rem; line-height:1.2; margin-bottom:14px; }
+  .hero p{ font-size:0.92rem; margin-bottom:32px; }
+  .role-card{ padding:20px 18px; }
+  .role-card-icon{ width:44px; height:44px; font-size:1.3rem; margin-bottom:12px; }
+  .role-card h3{ font-size:0.95rem; }
+  .role-card p{ font-size:0.82rem; }
+
+  /* ── STATS STRIP ── */
+  .stats-strip{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+    padding:0;
+  }
+  .stat-item{
+    padding:16px 12px;
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .stat-item:nth-child(even){ border-right:none; }
+  .stat-item:nth-child(3),
+  .stat-item:nth-child(4){ border-bottom:none; }
+  .stat-num{ font-size:1.2rem; }
+  .stat-label{ font-size:0.75rem; }
+
+  /* ── FEATURES ── */
+  .features{ padding:30px 14px 40px; }
+  .features-title{ font-size:1.25rem; }
+  .features-sub{ font-size:0.85rem; }
+  .feature-grid{ grid-template-columns:1fr; gap:10px; }
+  .feature-card{ padding:18px; }
+  .feature-icon{ font-size:1.5rem; margin-bottom:8px; }
+  .feature-card h4{ font-size:0.9rem; }
+  .feature-card p{ font-size:0.82rem; }
+
+  /* ── MAP FILTER BAR ──
+     Scrolls horizontally — swipe to see more filters */
+  #screen-map{ height:100dvh; } /* dvh = dynamic viewport height, avoids browser chrome issues */
+  .filter-bar{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
+    padding:8px 12px;
+    gap:6px;
+    scrollbar-width:none;
+    border-bottom:1px solid var(--border);
+  }
+  .filter-bar::-webkit-scrollbar{ display:none; }
+  .filter-divider{ display:none; }
+  .filter-section{ flex-shrink:0; scroll-snap-align:start; }
+  .filter-label{ font-size:0.72rem; white-space:nowrap; }
+  .day-pill{
+    padding:9px 13px;
+    font-size:0.8rem;
+    min-height:40px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .size-toggle{
+    padding:9px 13px;
+    font-size:0.8rem;
+    min-height:40px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .reset-filter-btn{
+    padding:9px 14px;
+    font-size:0.8rem;
+    min-height:40px;
+    flex-shrink:0;
+    margin-left:0;
+    white-space:nowrap;
+  }
+  .rate-value{ font-size:0.8rem; min-width:48px; }
+  .rate-group input[type=range]{ width:65px; }
+  .filter-count{ font-size:0.75rem; white-space:nowrap; flex-shrink:0; }
+
+  /* ── MAP POPUP ── */
+  .popup{ width:calc(100vw - 48px); min-width:unset; max-width:320px; }
+  .leaflet-popup-content-wrapper{ max-width:calc(100vw - 32px) !important; }
+  .popup-top{ padding:12px; gap:10px; }
+  .popup-avatar, .popup-avatar-placeholder{ width:48px; height:48px; border-radius:10px; }
+  .popup-name{ font-size:0.9rem; }
+  .popup-rate{ font-size:0.8rem; }
+  .popup-loc{ font-size:0.75rem; }
+  .popup-body{ padding:10px 12px; }
+  .popup-bio{ font-size:0.8rem; }
+  .popup-avail{ font-size:0.78rem; }
+  .popup-btn{
+    padding:12px 10px;
+    font-size:0.82rem;
+    min-height:44px; /* Full 44px tap target */
+    border-radius:10px;
+  }
+  .chip{ font-size:0.72rem; padding:3px 8px; }
+  .verified-badge{ font-size:0.72rem; }
+  .star{ font-size:0.75rem; }
+
+  /* ── RESUME MODAL ── */
+  .overlay{ padding:0; }
+  .modal{ max-height:95dvh; border-radius:20px 20px 0 0; }
+  .modal-drag-handle{ margin-top:10px; }
+  .modal-hero{ padding:18px 14px 16px; gap:12px; }
+  .modal-avatar,
+  .modal-avatar-placeholder{ width:64px; height:64px; border-radius:14px; }
+  .modal-hero-name{ font-size:1.05rem; }
+  .modal-hero-sub{ font-size:0.8rem; }
+  .hero-badge{ font-size:0.72rem; padding:3px 7px; }
+  .modal-hero-badges{ gap:4px; margin-bottom:6px; }
+  .modal-content{ padding:14px 14px 20px; }
+  .resume-block{ margin-bottom:18px; }
+  .resume-block-title{ font-size:0.72rem; letter-spacing:0.8px; margin-bottom:10px; }
+  .bio-text{ font-size:0.85rem; padding:12px; }
+  .resume-item{ padding:10px 12px; gap:10px; }
+  .ri-icon{ width:30px; height:30px; font-size:0.9rem; }
+  .ri-label{ font-size:0.72rem; }
+  .ri-value{ font-size:0.85rem; }
+  .service-tile{ padding:12px; }
+  .service-tile-label{ font-size:0.72rem; }
+  .service-tile-value{ font-size:0.88rem; }
+  .avail-day{ width:38px; height:38px; font-size:0.65rem; }
+  .avail-note{ font-size:0.8rem; }
+  .contact-box{ padding:14px; }
+  .contact-box-title{ font-size:0.85rem; }
+  .dog-upload-hint{ font-size:0.8rem; }
+  .contact-btns{ flex-direction:column; gap:8px; }
+  .contact-btn{ min-height:50px; font-size:0.9rem; border-radius:12px; }
+  .modal-close{ min-height:48px; font-size:0.88rem; margin-top:8px; }
+
+  /* ── SIGNUP FORM ── */
+  .form-wrap{ padding:16px 12px 80px; }
+  .form-page-title{ font-size:1.25rem; }
+  .form-page-sub{ font-size:0.85rem; margin-bottom:20px; }
+  .form-section{ padding:16px 14px; margin-bottom:12px; border-radius:14px; }
+  .form-section-header{ font-size:0.72rem; margin-bottom:14px; }
+  .form-field{ margin-bottom:14px; }
+  .form-label{ font-size:0.82rem; margin-bottom:5px; }
+  .form-input,
+  .form-select{ padding:12px 14px; border-radius:10px; }
+  .form-textarea{ padding:12px 14px; min-height:90px; border-radius:10px; }
+  .form-hint{ font-size:0.78rem; }
+  .photo-zone{ padding:20px 16px; border-radius:12px; }
+  .photo-zone-icon{ font-size:1.8rem; }
+  .photo-zone-text{ font-size:0.85rem; }
+  .photo-zone-hint{ font-size:0.78rem; }
+  .progress-label{ font-size:0.72rem; }
+
+  /* Day picker — wrap into 2 rows of 4 */
+  .day-picker{ flex-wrap:wrap; gap:6px; }
+  .day-pick-box{
+    width:44px; height:44px;
+    font-size:0.72rem;
+    border-radius:10px;
+  }
+
+  /* Size picker */
+  .size-picker{ gap:8px; }
+  .size-pick-box{ padding:10px 6px; font-size:0.78rem; }
+
+  /* Location */
+  .location-row{ gap:8px; }
+  .gps-btn{ padding:12px 12px; font-size:0.82rem; min-height:44px; }
+  .loc-status{ font-size:0.78rem; }
+
+  /* Submit */
+  .submit-section{ padding:16px; border-radius:14px; }
+  .submit-btn{ min-height:52px; font-size:0.95rem; border-radius:12px; }
+  .submit-note{ font-size:0.76rem; }
+  .form-progress{ margin-bottom:20px; }
+
+  /* ── DASHBOARD ── */
+  .dash-wrap{ padding:16px 12px 60px; }
+  .form-page-title{ font-size:1.2rem; }
+  .profile-banner{ height:80px; }
+  .profile-avatar,
+  .profile-avatar-placeholder{ width:64px; height:64px; border-radius:14px; }
+  .profile-avatar-wrap{ bottom:-32px; left:16px; }
+  .profile-body{ padding:46px 16px 18px; }
+  .profile-name{ font-size:1.1rem; }
+  .profile-meta{ font-size:0.8rem; }
+  .p-badge{ font-size:0.72rem; padding:3px 9px; }
+  .profile-stats{ margin-top:16px; border-radius:10px; }
+  .profile-stat{ padding:12px 8px; }
+  .profile-stat-num{ font-size:1rem; }
+  .profile-stat-label{ font-size:0.68rem; }
+  .action-card{ padding:16px; border-radius:14px; margin-top:12px; }
+  .action-card h3{ font-size:0.85rem; margin-bottom:12px; }
+  .action-btn{
+    padding:14px 14px;
+    min-height:52px;
+    font-size:0.88rem;
+    border-radius:12px;
+  }
+  .action-btn-icon{ width:28px; height:28px; font-size:0.88rem; border-radius:7px; }
+
+  /* Share panel */
+  #share-panel{ border-radius:12px; padding:14px; }
+
+  /* ── WALKER GATE ── */
+  #screen-walker-gate > div{ padding:16px; }
+  .gate-card{ padding:24px 18px; border-radius:18px; width:100%; }
+  .gate-icon{ font-size:2.5rem; margin-bottom:12px; }
+  .gate-title{ font-size:1.2rem; }
+  .gate-sub{ font-size:0.85rem; margin-bottom:24px; }
+  .gate-option{
+    padding:16px 14px;
+    gap:12px;
+    min-height:72px;
+    border-radius:14px;
+  }
+  .gate-opt-icon{ width:40px; height:40px; border-radius:10px; font-size:1.2rem; }
+  .gate-opt-text h4{ font-size:0.92rem; }
+  .gate-opt-text p{ font-size:0.78rem; }
+
+  /* ── LOGIN ── */
+  #screen-login > div{ padding:16px; width:100%; }
+  .login-wrap{ padding:16px 0 40px; width:100%; max-width:100%; }
+  .login-card{ padding:24px 18px; border-radius:18px; }
+  .login-card h2{ font-size:1.2rem; }
+  .login-card .login-sub{ font-size:0.85rem; margin-bottom:20px; }
+  .login-btn{ min-height:50px; font-size:0.95rem; border-radius:12px; }
+  .login-switch{ min-height:48px; font-size:0.88rem; border-radius:12px; }
+  .login-error{ font-size:0.82rem; }
+
+  /* ── TOAST ── */
+  .toast{ font-size:0.85rem; padding:12px 18px; bottom:20px; max-width:90vw; white-space:normal; text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     LANDING
+══════════════════════════════════════════════ -->
+<div id="screen-landing" class="screen active">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-tag" data-i18n="heroTag">🐾 Modi'in Maccabim Re'ut · Trusted Dog Walking</div>
+    <h1 data-i18n="heroH1">Find a trusted walker<br>for your <span>best friend</span></h1>
+    <p data-i18n="heroP">Connect with verified, experienced dog walkers in your neighborhood — or offer your services to dog owners nearby.</p>
+    <div class="hero-cards">
+      <div class="role-card" data-role="owner" onclick="chooseRole('owner')">
+        <div class="role-card-icon owner">🏠</div>
+        <h3 data-i18n="ownerCardH3">I need a dog walker</h3>
+        <p data-i18n="ownerCardP">Browse walkers on a live map, read their full resume, and contact them instantly.</p>
+        <div class="role-card-arrow" data-i18n="ownerCardArrow">Find walkers →</div>
+      </div>
+      <div class="role-card" data-role="walker" onclick="chooseRole('walker')">
+        <div class="role-card-icon walker">🦮</div>
+        <h3 data-i18n="walkerCardH3">I'm a dog walker</h3>
+        <p data-i18n="walkerCardP">Post your profile, set your rates and availability, and get discovered by local dog owners.</p>
+        <div class="role-card-arrow" data-i18n="walkerCardArrow">Post my services →</div>
+      </div>
+    </div>
+    <button id="browse-map-btn" onclick="navigate('map')" style="
+      margin-top:20px;
+      background:rgba(255,255,255,0.12);
+      border:1.5px solid rgba(255,255,255,0.3);
+      color:rgba(255,255,255,0.9);
+      padding:11px 28px;
+      border-radius:999px;
+      font-family:'Inter',sans-serif;
+      font-size:0.88rem;
+      font-weight:600;
+      cursor:pointer;
+      transition:all 0.18s;
+      backdrop-filter:blur(8px);
+      position:relative;
+    " onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+      <span data-i18n="browseMap">🗺️ Just browse the map first</span>
+    </button>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-item">
+      <div class="stat-num">12+</div>
+      <div class="stat-label" data-i18n="stat1Label">Active walkers</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">Modi'in</div>
+      <div class="stat-label" data-i18n="stat2Label">Area coverage</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num"><span class="shk">₪</span>45–<span class="shk">₪</span>100</div>
+      <div class="stat-label" data-i18n="stat3Label">Typical rates</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">Free</div>
+      <div class="stat-label" data-i18n="stat4Label">To list & browse</div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="features-title" data-i18n="featuresTitle">Everything you need</div>
+    <div class="features-sub" data-i18n="featuresSub">Simple, local, and free for everyone in Modi'in.</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <h4>Live Map View</h4>
+        <p>See exactly where walkers are located across Modi'in, Maccabim, and Re'ut.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h4>Full Walker Resumes</h4>
+        <p>Read experience, certifications, skills, availability, and rates before contacting.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📸</div>
+        <h4>Dog Photo Sharing</h4>
+        <p>Share a photo of your dog when reaching out so walkers know who they'll be meeting.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h4>Direct Contact</h4>
+        <p>Email or WhatsApp walkers directly — no middleman, no fees, no booking system.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h4>Smart Filters</h4>
+        <p>Filter by day of week, your budget, and dog size to find the perfect match.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <h4>GPS-Precise Listings</h4>
+        <p>Walkers pin their exact location so you can find someone in your neighborhood.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Disclaimer -->
+  <div style="background:#111827;color:#9CA3AF;padding:32px 24px;font-family:'Inter',sans-serif;font-size:0.78rem;line-height:1.7;">
+    <div style="max-width:780px;margin:0 auto;">
+
+      <div style="display:flex;align-items:flex-start;gap:12px;background:#1F2937;border:1px solid #374151;border-left:4px solid #F59E0B;border-radius:10px;padding:16px 18px;margin-bottom:20px;">
+        <span style="font-size:1.2rem;flex-shrink:0;margin-top:1px;">⚠️</span>
+        <div>
+          <div style="color:#F9FAFB;font-weight:700;font-size:0.85rem;margin-bottom:6px;">Safety Disclaimer</div>
+          PawWalk Modiin is a free local listing platform. We do <strong style="color:#fff">not</strong> verify, background-check, or vet any dog walker listed on this site. It is your sole responsibility to independently verify the identity, qualifications, and suitability of any person you contact through this platform. Always meet in a public place first, ask for references, and trust your instincts. PawWalk Modiin accepts no liability for any loss, injury, or damage arising from contact made through this service.
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;background:#1F2937;border:1px solid #374151;border-left:4px solid #60A5FA;border-radius:10px;padding:16px 18px;margin-bottom:20px;">
+        <span style="font-size:1.2rem;flex-shrink:0;margin-top:1px;">🔞</span>
+        <div>
+          <div style="color:#F9FAFB;font-weight:700;font-size:0.85rem;margin-bottom:6px;">Age Requirement</div>
+          You must be <strong style="color:#fff">14 years of age or older</strong> to create a listing or contact a walker through PawWalk Modiin. Users under 18 should have parental or guardian awareness before making contact with any walker. By using this platform you confirm that you meet this age requirement. PawWalk Modiin is not responsible for use of this service by anyone under 14.
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;background:#1F2937;border:1px solid #374151;border-left:4px solid #34D399;border-radius:10px;padding:16px 18px;margin-bottom:24px;">
+        <span style="font-size:1.2rem;flex-shrink:0;margin-top:1px;">🐾</span>
+        <div>
+          <div style="color:#F9FAFB;font-weight:700;font-size:0.85rem;margin-bottom:6px;">No Guarantee of Service</div>
+          PawWalk Modiin does not guarantee the availability, professionalism, or conduct of any listed walker. All arrangements, payments, and agreements are made directly between dog owners and walkers. PawWalk Modiin is not a party to any such agreement and holds no responsibility for disputes, cancellations, or incidents that occur between users.
+        </div>
+      </div>
+
+      <div style="text-align:center;border-top:1px solid #1F2937;padding-top:18px;color:#6B7280;">
+        <strong style="color:#fff">PawWalk Modiin</strong> · Modi'in Maccabim Re'ut · Free local marketplace<br>
+        <span style="font-size:0.72rem;margin-top:4px;display:block;">By using this site you agree to these terms · For questions contact the site owner directly</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAP
+══════════════════════════════════════════════ -->
+<div id="screen-map" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <span id="walker-count-badge" class="nav-badge">5 walkers</span>
+      <button class="nav-pill ghost" onclick="navigate('landing')" data-i18n="navHome">← Home</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-section">
+      <span class="filter-label" data-i18n="filterDay">Day</span>
+      <div id="day-pills" style="display:flex;gap:4px;">
+        <div class="day-pill" data-day="sun" onclick="toggleDay(this)" data-i18n="daySun">Sun</div>
+        <div class="day-pill" data-day="mon" onclick="toggleDay(this)" data-i18n="dayMon">Mon</div>
+        <div class="day-pill" data-day="tue" onclick="toggleDay(this)" data-i18n="dayTue">Tue</div>
+        <div class="day-pill" data-day="wed" onclick="toggleDay(this)" data-i18n="dayWed">Wed</div>
+        <div class="day-pill" data-day="thu" onclick="toggleDay(this)" data-i18n="dayThu">Thu</div>
+        <div class="day-pill" data-day="fri" onclick="toggleDay(this)" data-i18n="dayFri">Fri</div>
+        <div class="day-pill" data-day="sat" onclick="toggleDay(this)" data-i18n="daySat">Sat</div>
+      </div>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-section">
+      <span class="filter-label" data-i18n="filterBudget">Budget</span>
+      <div class="rate-group">
+        <span class="rate-value" id="rate-display"><span class="shk">₪</span>200</span>
+        <input type="range" id="rate-filter" min="20" max="200" value="200" step="5" oninput="onFilterChange()">
+      </div>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-section">
+      <span class="filter-label" data-i18n="filterSize">Size</span>
+      <div class="size-group">
+        <button class="size-toggle active" data-size="small" onclick="toggleSize(this)">🐩 Small</button>
+        <button class="size-toggle active" data-size="medium" onclick="toggleSize(this)">🐕 Medium</button>
+        <button class="size-toggle active" data-size="large" onclick="toggleSize(this)">🦮 Large</button>
+      </div>
+    </div>
+    <span id="filter-count" class="filter-count" style="display:none"></span>
+    <button class="reset-filter-btn" onclick="resetFilters()">✕ Reset</button>
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SIGNUP
+══════════════════════════════════════════════ -->
+<div id="screen-signup" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-pill ghost" onclick="navigate('landing')" data-i18n="navBack">← Back</button>
+    </div>
+  </div>
+
+  <div class="form-wrap">
+    <div class="form-progress">
+      <div class="progress-step done"></div>
+      <div class="progress-step done"></div>
+      <div class="progress-step active"></div>
+      <span class="progress-label">Step 3 of 3 — Your Profile</span>
+    </div>
+
+    <div class="form-page-title">🦮 Create your walker profile</div>
+    <p class="form-page-sub">This becomes your public resume — dog owners will read it before contacting you.</p>
+
+    <div id="form-error" class="form-error">⚠️ Please fill in all required fields marked with *</div>
+
+    <!-- Personal -->
+    <div class="form-section">
+      <div class="form-section-header">Personal Information</div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">First Name <span class="req">*</span></label>
+            <input class="form-input" id="f-firstname" type="text" placeholder="Miriam">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Last Name <span class="req">*</span></label>
+            <input class="form-input" id="f-lastname" type="text" placeholder="Cohen">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Email Address <span class="req">*</span></label>
+            <input class="form-input" id="f-email" type="email" placeholder="miriam@gmail.com">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Phone / WhatsApp</label>
+            <input class="form-input" id="f-phone" type="tel" placeholder="050-000-0000">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Password <span class="req">*</span></label>
+            <div class="pw-field">
+              <input class="form-input" id="f-password" type="password" placeholder="Choose a password">
+              <button class="pw-toggle" type="button" onclick="togglePw('f-password',this)">👁</button>
+            </div>
+            <div class="form-hint">Min. 6 characters — you'll use this to sign in later</div>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Confirm Password <span class="req">*</span></label>
+            <div class="pw-field">
+              <input class="form-input" id="f-password2" type="password" placeholder="Repeat password">
+              <button class="pw-toggle" type="button" onclick="togglePw('f-password2',this)">👁</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo -->
+    <div class="form-section">
+      <div class="form-section-header">Profile Photo</div>
+      <div class="photo-zone" onclick="document.getElementById('f-photo').click()">
+        <input type="file" id="f-photo" accept="image/*" onchange="previewPhoto(this,'profile-preview')">
+        <div class="photo-zone-icon">📷</div>
+        <div class="photo-zone-text">Click to upload your photo</div>
+        <div class="photo-zone-hint">JPG, PNG — appears on the map and your resume</div>
+        <img id="profile-preview">
+      </div>
+    </div>
+
+    <!-- Resume -->
+    <div class="form-section">
+      <div class="form-section-header">Your Resume</div>
+      <div class="form-field">
+        <label class="form-label">About You <span class="req">*</span></label>
+        <textarea class="form-textarea" id="f-bio" placeholder="Tell dog owners about yourself — your experience with dogs, your personality, your walking style..."></textarea>
+        <div class="form-hint">This is the first thing dog owners read. Be warm and honest.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Years of Experience</label>
+            <input class="form-input" id="f-experience" type="number" placeholder="3" min="0" max="50">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Languages Spoken</label>
+            <input class="form-input" id="f-languages" placeholder="Hebrew, English...">
+          </div>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Certifications & Training</label>
+        <input class="form-input" id="f-certs" placeholder="e.g. CPDT-KA, Dog First Aid, AKC Canine Good Citizen">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Specializations & Skills</label>
+        <input class="form-input" id="f-skills" placeholder="e.g. Reactive dogs, puppies, senior dogs, medication administration">
+      </div>
+    </div>
+
+    <!-- Rates & Service -->
+    <div class="form-section">
+      <div class="form-section-header">Rates & Service</div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Rate (<span class="shk">₪</span>) <span class="req">*</span></label>
+            <input class="form-input" id="f-rate" type="number" placeholder="60" min="1">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Billing Unit</label>
+            <select class="form-select" id="f-rate-unit">
+              <option value="per hour">Per Hour</option>
+              <option value="per walk">Per Walk</option>
+              <option value="per day">Per Day</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-field">
+            <label class="form-label">Max Dogs at Once</label>
+            <input class="form-input" id="f-maxdogs" type="number" placeholder="3" min="1" max="10">
+          </div>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Dog Sizes You Accept</label>
+        <div class="size-picker" style="margin-top:8px">
+          <label class="size-pick-label"><input type="checkbox" id="sz-small" value="small" checked><div class="size-pick-box">🐩<br><span style="display:block;margin-top:3px">Small</span></div></label>
+          <label class="size-pick-label"><input type="checkbox" id="sz-medium" value="medium" checked><div class="size-pick-box">🐕<br><span style="display:block;margin-top:3px">Medium</span></div></label>
+          <label class="size-pick-label"><input type="checkbox" id="sz-large" value="large"><div class="size-pick-box">🦮<br><span style="display:block;margin-top:3px">Large</span></div></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Availability -->
+    <div class="form-section">
+      <div class="form-section-header">Availability</div>
+      <div class="form-field">
+        <label class="form-label">Days Available</label>
+        <div class="day-picker" style="margin-top:8px">
+          <label class="day-pick-label"><input type="checkbox" id="av-sun" checked><div class="day-pick-box">Sun</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-mon" checked><div class="day-pick-box">Mon</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-tue" checked><div class="day-pick-box">Tue</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-wed"><div class="day-pick-box">Wed</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-thu" checked><div class="day-pick-box">Thu</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-fri"><div class="day-pick-box">Fri</div></label>
+          <label class="day-pick-label"><input type="checkbox" id="av-sat"><div class="day-pick-box">Sat</div></label>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Availability Note</label>
+        <input class="form-input" id="f-avnote" placeholder="e.g. Mornings only on weekdays, flexible on weekends">
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="form-section">
+      <div class="form-section-header">Your Location</div>
+      <div class="form-field">
+        <label class="form-label">Neighborhood <span class="req">*</span></label>
+        <div class="location-row">
+          <input class="form-input" id="f-neighborhood" placeholder="e.g. Buchman, Heftziba, Yuvali, Re'ut..." style="flex:1">
+          <button class="gps-btn" onclick="useMyLocation()">📍 Use GPS</button>
+        </div>
+        <input type="hidden" id="f-lat">
+        <input type="hidden" id="f-lng">
+        <div id="location-status" class="loc-status"></div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="submit-section">
+      <button class="submit-btn" onclick="submitWalker()">
+        🐾 Post My Listing on the Map
+      </button>
+      <div class="submit-note">🔒 Your info is stored locally on this device · Free forever</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-pill ghost" onclick="navigate('landing')" data-i18n="navHome">← Home</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <div class="form-page-title" style="margin-bottom:4px" data-i18n="dashTitle">My Walker Profile</div>
+    <p class="form-page-sub" data-i18n="dashLive">You're live on the map 🟢</p>
+
+    <div class="profile-card">
+      <div class="profile-banner">
+        <div class="profile-avatar-wrap">
+          <img id="dash-photo" class="profile-avatar">
+          <div id="dash-placeholder" class="profile-avatar-placeholder">🦮</div>
+        </div>
+      </div>
+      <div class="profile-body">
+        <div id="dash-name" class="profile-name"></div>
+        <div id="dash-meta" class="profile-meta"></div>
+        <div id="dash-badges" class="profile-badges"></div>
+        <div id="dash-stats" class="profile-stats"></div>
+      </div>
+    </div>
+
+    <div class="action-card">
+      <h3 data-i18n="dashManage">Manage Your Listing</h3>
+      <div class="action-btns">
+        <button class="action-btn secondary" onclick="navigate('map')">
+          <div class="action-btn-icon" style="background:var(--primary-pale)">🗺️</div>
+          <span data-i18n="dashViewMap">View My Pin on the Map</span>
+        </button>
+        <button class="action-btn primary" onclick="editMyProfile()">
+          <div class="action-btn-icon">✏️</div>
+          <span data-i18n="dashEdit">Edit My Profile</span>
+        </button>
+        <button class="action-btn secondary" onclick="shareProfile()" style="background:linear-gradient(135deg,#25D366,#1da851);color:#fff;border:none;">
+          <div class="action-btn-icon" style="background:rgba(255,255,255,0.2)">📤</div>
+          <span data-i18n="dashShare">Share My Profile</span>
+        </button>
+        <button class="action-btn danger" onclick="removeListing()">
+          <div class="action-btn-icon" style="background:#FEE2E2">🗑️</div>
+          <span data-i18n="dashRemove">Remove My Listing</span>
+        </button>
+      </div>
+
+      <!-- Share options panel -->
+      <div id="share-panel" style="display:none;margin-top:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">Share via</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button onclick="shareViaWhatsApp()" style="
+            display:flex;align-items:center;gap:10px;padding:11px 14px;
+            border-radius:var(--radius-md);border:none;background:#25D366;color:#fff;
+            font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;
+            transition:all 0.15s;
+          ">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            Send on WhatsApp
+          </button>
+          <button onclick="copyProfileCard()" style="
+            display:flex;align-items:center;gap:10px;padding:11px 14px;
+            border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text-2);
+            font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;
+            transition:all 0.15s;
+          ">
+            📋 Copy Profile Card
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     WALKER GATE
+══════════════════════════════════════════════ -->
+<div id="screen-walker-gate" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-pill ghost" onclick="navigate('landing')" data-i18n="navBack">← Back</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div class="gate-card">
+      <div class="gate-icon">🦮</div>
+      <div class="gate-title" data-i18n="gateTitle">Dog Walker Portal</div>
+      <p class="gate-sub" data-i18n="gateSub">New here? Create your free listing. Already signed up? Sign back in to manage your profile.</p>
+      <div class="gate-options">
+        <div class="gate-option primary-opt" onclick="navigate('signup')">
+          <div class="gate-opt-icon">✨</div>
+          <div class="gate-opt-text">
+            <h4 data-i18n="gateCreate">Create My Listing</h4>
+            <p data-i18n="gateCreateSub">New to PawWalk Modiin — set up your walker profile</p>
+          </div>
+        </div>
+        <div class="gate-option" onclick="navigate('login')">
+          <div class="gate-opt-icon">🔑</div>
+          <div class="gate-opt-text">
+            <h4 data-i18n="gateSignIn">Sign In to My Account</h4>
+            <p data-i18n="gateSignInSub">Already listed — edit or manage my profile</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="navbar">
+    <a class="nav-logo" href="#" onclick="navigate('landing');return false;">
+      <div class="nav-logo-icon">🐾</div>
+      <span class="nav-logo-text">PawWalk <em>Modiin</em></span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-pill ghost" onclick="navigate('walker-gate')" data-i18n="navBack">← Back</button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div class="login-wrap">
+      <div class="login-card">
+        <h2 data-i18n="loginTitle">🔑 Welcome back</h2>
+        <p class="login-sub" data-i18n="loginSub">Sign in with the email and password you used when you created your listing.</p>
+        <div id="login-error" class="login-error"></div>
+        <div class="form-field">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" id="login-email" type="email" placeholder="your@email.com">
+        </div>
+        <div class="form-field" style="margin-top:14px">
+          <label class="form-label">Password</label>
+          <div class="pw-field">
+            <input class="form-input" id="login-password" type="password" placeholder="Your password">
+            <button class="pw-toggle" type="button" onclick="togglePw('login-password',this)">👁</button>
+          </div>
+        </div>
+        <button class="login-btn" onclick="loginWalker()" data-i18n="loginBtn">Sign In →</button>
+        <div class="login-divider">or</div>
+        <button class="login-switch" onclick="navigate('signup')" data-i18n="loginSwitch">New here? Create a listing instead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     RESUME MODAL
+══════════════════════════════════════════════ -->
+<div class="overlay" id="resume-modal" onclick="maybeCloseModal(event)">
+  <div class="modal" id="modal-inner">
+    <div class="modal-drag-handle"></div>
+
+    <div class="modal-hero">
+      <img id="modal-photo" class="modal-avatar" style="display:none">
+      <div id="modal-placeholder" class="modal-avatar-placeholder">🦮</div>
+      <div class="modal-hero-info">
+        <div class="modal-hero-badges" id="modal-badges"></div>
+        <div class="modal-hero-name" id="modal-name"></div>
+        <div class="modal-hero-sub" id="modal-sub"></div>
+        <div class="modal-hero-stars" id="modal-stars"></div>
+      </div>
+    </div>
+
+    <div class="modal-content">
+
+      <!-- About -->
+      <div class="resume-block">
+        <div class="resume-block-title">About</div>
+        <div class="bio-text" id="modal-bio"></div>
+      </div>
+
+      <!-- Resume rows -->
+      <div class="resume-block" id="resume-rows-block">
+        <div class="resume-block-title">Experience & Qualifications</div>
+        <div class="resume-items" id="modal-resume-items"></div>
+      </div>
+
+      <!-- Service -->
+      <div class="resume-block">
+        <div class="resume-block-title">Service Details</div>
+        <div class="service-grid" id="modal-service-grid"></div>
+        <div class="size-badges" id="modal-size-badges"></div>
+      </div>
+
+      <!-- Availability -->
+      <div class="resume-block">
+        <div class="resume-block-title">Availability</div>
+        <div class="avail-row" id="modal-avail-row"></div>
+        <div class="avail-note" id="modal-avnote"></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="contact-box">
+        <div class="contact-box-title" data-i18n="modalContact">📬 Contact This Walker</div>
+        <label class="dog-upload-label" data-i18n="modalDogPhoto">Add a photo of your dog (optional)</label>
+        <div class="dog-upload-zone">
+          <input type="file" accept="image/*" onchange="previewDogPhoto(this)">
+          <div class="dog-upload-hint">🐶 Tap to upload a photo of your dog</div>
+        </div>
+        <img id="dog-preview">
+        <div class="contact-btns" style="margin-top:12px">
+          <button class="contact-btn email" onclick="contactEmail()" data-i18n="modalEmail">✉️ Send Email</button>
+          <button class="contact-btn whatsapp" id="modal-wa-btn" onclick="contactPhone()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <button class="modal-close" onclick="closeModalDirect()" data-i18n="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     DISCLAIMER POPUP
+══════════════════════════════════════════════ -->
+<div id="disclaimer-overlay" style="
+  display:flex;position:fixed;inset:0;
+  background:rgba(10,15,25,0.75);
+  z-index:9998;
+  align-items:center;justify-content:center;
+  padding:16px;
+  backdrop-filter:blur(6px);
+">
+  <div style="
+    background:#fff;
+    border-radius:20px;
+    max-width:500px;width:100%;
+    box-shadow:0 40px 80px rgba(0,0,0,0.35);
+    overflow:hidden;
+    animation:fadeUp 0.3s ease;
+    font-family:'Inter',sans-serif;
+  ">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1B4332,#2D6A4F);padding:24px;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">🐾</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.2rem;font-weight:800;color:#fff;">Before you enter PawWalk Modiin</div>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:4px;">Please read and accept the following</div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:16px;max-height:55vh;overflow-y:auto;">
+
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#FFFBEB;border:1px solid #FDE68A;border-left:4px solid #F59E0B;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
+        <div>
+          <div style="font-size:0.88rem;font-weight:700;color:#111827;margin-bottom:4px;">Safety</div>
+          <div style="font-size:0.85rem;color:#374151;line-height:1.6;">PawWalk Modiin does <strong>not</strong> background-check or verify any walker. Always meet in a public place first, ask for references, and trust your instincts. Use this service at your own discretion.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#EFF6FF;border:1px solid #BFDBFE;border-left:4px solid #3B82F6;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <span style="font-size:1.1rem;flex-shrink:0">🔞</span>
+        <div>
+          <div style="font-size:0.88rem;font-weight:700;color:#111827;margin-bottom:4px;">Age Requirement — 14+</div>
+          <div style="font-size:0.85rem;color:#374151;line-height:1.6;">You must be <strong>14 years or older</strong> to use this site. Users under 18 should have a parent or guardian's knowledge before contacting any walker. By continuing you confirm you meet this requirement.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#F0FDF4;border:1px solid #BBF7D0;border-left:4px solid #22C55E;border-radius:10px;padding:14px;margin-bottom:4px;">
+        <span style="font-size:1.1rem;flex-shrink:0">🤝</span>
+        <div>
+          <div style="font-size:0.88rem;font-weight:700;color:#111827;margin-bottom:4px;">No Guarantee</div>
+          <div style="font-size:0.85rem;color:#374151;line-height:1.6;">All arrangements are made directly between dog owners and walkers. PawWalk Modiin is not responsible for any disputes, cancellations, or incidents between users.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 22px;border-top:1px solid #E5E7EB;background:#F9FAFB;">
+      <button onclick="acceptDisclaimer()" style="
+        width:100%;padding:16px;min-height:52px;
+        border-radius:12px;border:none;
+        background:linear-gradient(135deg,#1B4332,#2D6A4F);
+        color:#fff;font-size:1rem;font-weight:700;
+        cursor:pointer;font-family:'Inter',sans-serif;
+        box-shadow:0 4px 14px rgba(27,67,50,0.35);
+        transition:all 0.18s;
+      " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+        ✅ I understand — Enter PawWalk Modiin
+      </button>
+      <div style="text-align:center;font-size:0.8rem;color:#9CA3AF;margin-top:10px;">
+        By entering you agree to these terms · Must be 14 or older
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Language Toggle FAB -->
+<button id="lang-fab" onclick="toggleLang()">🌐 עברית</button>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   STATE & CONSTANTS
+═══════════════════════════════════════════════════ */
+const S = {
+  screen: 'landing',
+  role: null,
+  map: null,
+  markers: [],
+  walkers: [],
+  activeWalker: null,
+  myId: null,
+  lang: 'en',
+  filters: { days: [], maxRate: 200, sizes: ['small','medium','large'] }
+};
+
+/* ── SUPABASE CONFIG ── */
+const SB_URL = 'https://esgahkdpluwnbpmtqzrc.supabase.co';
+const SB_KEY = 'sb_publishable_F2_-f68GAeEJJ9yoKJdDYA_sGAWRsV0';
+function sbH() {
+  return { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+}
+function walkerToRow(w) {
+  return {
+    id: w.id, name: w.name, email: w.email,
+    password_hash: w.passwordHash || null,
+    phone: w.phone || '', neighborhood: w.neighborhood || '',
+    bio: w.bio || '', experience: w.experience || 0,
+    certs: w.certs || '', skills: w.skills || '', languages: w.languages || '',
+    rate: w.rate || 0, rate_unit: w.rateUnit || 'per hour', max_dogs: w.maxDogs || 1,
+    photo: w.photo || '', lat: w.lat || 0, lng: w.lng || 0,
+    avail_note: w.availNote || '', availability: w.availability || {},
+    dog_sizes: w.dogSizes || [], rating: w.rating || 5.0,
+    reviews: w.reviews || 0, verified: w.verified || false
+  };
+}
+function rowToWalker(r) {
+  return {
+    id: r.id, name: r.name, email: r.email, passwordHash: r.password_hash,
+    phone: r.phone, neighborhood: r.neighborhood, bio: r.bio,
+    experience: r.experience, certs: r.certs, skills: r.skills, languages: r.languages,
+    rate: r.rate, rateUnit: r.rate_unit, maxDogs: r.max_dogs,
+    photo: r.photo, lat: r.lat, lng: r.lng, availNote: r.avail_note,
+    availability: r.availability || {}, dogSizes: r.dog_sizes || [],
+    rating: r.rating, reviews: r.reviews, verified: r.verified
+  };
+}
+
+const MODIN = { lat: 31.8969, lng: 35.0097, zoom: 14 };
+const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
+const DAY_FULL = { sun:'Sunday', mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday' };
+const DAY_SHORT = { sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat' };
+
+/* ═══════════════════════════════════════════════════
+   SEED WALKERS
+═══════════════════════════════════════════════════ */
+const SEEDS = [
+  {
+    id:'seed_1', name:'Noa Shapiro',
+    email:'noa.shapiro@gmail.com', phone:'054-111-2233',
+    bio:'Passionate dog lover with 6 years of professional experience. I treat every dog with patience and care — specializing in anxious and reactive dogs. Each walk includes a post-walk update with photos.',
+    experience:6, certs:'Certified Professional Dog Trainer (CPDT-KA), Dog First Aid & CPR',
+    skills:'Reactive dogs, anxious temperaments, puppies, senior dogs',
+    languages:'Hebrew, English',
+    rate:65, rateUnit:'per hour', maxDogs:3,
+    photo:'', neighborhood:'Buchman',
+    lat:31.9010, lng:35.0050,
+    availability:{sun:true,mon:true,tue:true,wed:false,thu:true,fri:false,sat:false},
+    availNote:'Mornings 7am–12pm weekdays',
+    dogSizes:['small','medium'], rating:4.9, reviews:34
+  },
+  {
+    id:'seed_2', name:'Amit Ben-David',
+    email:'amit.bd@walla.com', phone:'052-987-6543',
+    bio:'Former IDF military dog handler with 8 years experience working with all breeds. Now running a professional dog walking business. All walks are GPS-tracked and I send live updates throughout.',
+    experience:8, certs:'IDF K9 Handler Certification, GPS Tracking Service',
+    skills:'Large & strong breeds, pullers, guard dogs, obedience reinforcement',
+    languages:'Hebrew',
+    rate:80, rateUnit:'per walk', maxDogs:2,
+    photo:'', neighborhood:'Heftziba',
+    lat:31.8950, lng:35.0160,
+    availability:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
+    availNote:'Afternoons preferred (1pm–6pm)',
+    dogSizes:['medium','large'], rating:5.0, reviews:22
+  },
+  {
+    id:'seed_3', name:'Yael Friedman',
+    email:'yael.walks@gmail.com', phone:'058-444-5566',
+    bio:'4th year veterinary student at Hebrew University. My medical background means your dog is in the safest possible hands. I can administer medication, spot health issues early, and handle any emergency.',
+    experience:3, certs:'Vet Student (Year 4, HUJI), Pet First Aid Certified',
+    skills:'Medication administration, health monitoring, puppies, senior & special-needs dogs',
+    languages:'Hebrew, English, French',
+    rate:55, rateUnit:'per hour', maxDogs:4,
+    photo:'', neighborhood:'Yuvali',
+    lat:31.9030, lng:35.0200,
+    availability:{sun:true,mon:false,tue:false,wed:true,thu:false,fri:true,sat:true},
+    availNote:'Available Sun, Wed, Fri–Sat only',
+    dogSizes:['small','medium','large'], rating:4.8, reviews:18
+  },
+  {
+    id:'seed_4', name:'Daniel Katz',
+    email:'dkatz.walks@gmail.com', phone:'050-777-8899',
+    bio:'Retired PE teacher turned full-time dog walker. I take small groups on long scenic hikes through Modi\'in\'s parks and forest trails. Your dog comes home genuinely happy and tired — guaranteed.',
+    experience:4, certs:'Hiking Guide License (Ministry of Tourism), Pet CPR',
+    skills:'Trail hiking, group walks, high-energy breeds, socialization training',
+    languages:'Hebrew, Russian',
+    rate:45, rateUnit:'per walk', maxDogs:5,
+    photo:'', neighborhood:'Maccabim',
+    lat:31.8900, lng:35.0020,
+    availability:{sun:true,mon:true,tue:true,wed:true,thu:true,fri:false,sat:false},
+    availNote:'Weekday mornings 6:30am–11am',
+    dogSizes:['small','medium','large'], rating:4.7, reviews:41
+  },
+  {
+    id:'seed_5', name:'Shira Levi',
+    email:'shira.dogwalker@outlook.com', phone:'053-222-3344',
+    bio:'Professional dog sitter and walker for 5 years, specializing in small and toy breeds. Fully insured. I send GPS updates every 30 minutes and photos during every walk. Flexible scheduling available.',
+    experience:5, certs:"Pet Sitters International (PSI) Member, Fully Insured",
+    skills:'Small & toy breeds, puppies, senior dogs, overnight pet sitting',
+    languages:'Hebrew, English',
+    rate:70, rateUnit:'per hour', maxDogs:3,
+    photo:'', neighborhood:"Re'ut",
+    lat:31.8870, lng:35.0130,
+    availability:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
+    availNote:'Mon–Fri 7am–6pm, some Saturday mornings',
+    dogSizes:['small'], rating:4.9, reviews:57
+  }
+];
+
+/* ═══════════════════════════════════════════════════
+   STORAGE — Supabase cloud database
+═══════════════════════════════════════════════════ */
+async function fetchWalkers() {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/walkers?select=*', { headers: sbH() });
+    if (!res.ok) return null;
+    return (await res.json()).map(rowToWalker);
+  } catch(e) { return null; }
+}
+
+async function upsertWalker(w) {
+  const res = await fetch(SB_URL + '/rest/v1/walkers', {
+    method: 'POST',
+    headers: { ...sbH(), 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify(walkerToRow(w))
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Save failed'); }
+}
+
+async function deleteWalker(id) {
+  await fetch(SB_URL + '/rest/v1/walkers?id=eq.' + encodeURIComponent(id), {
+    method: 'DELETE', headers: sbH()
+  });
+}
+
+async function initStorage() {
+  try {
+    let walkers = await fetchWalkers();
+    if (walkers === null) throw new Error('offline');
+    if (walkers.length === 0) {
+      for (const w of SEEDS) {
+        await fetch(SB_URL + '/rest/v1/walkers', {
+          method: 'POST',
+          headers: { ...sbH(), 'Prefer': 'resolution=ignore-duplicates' },
+          body: JSON.stringify(walkerToRow(w))
+        });
+      }
+      walkers = SEEDS;
+    }
+    S.walkers = walkers;
+  } catch(e) {
+    const local = localStorage.getItem('pawwalk_modiin_v2_walkers');
+    S.walkers = local ? JSON.parse(local) : SEEDS;
+  }
+  S.myId = localStorage.getItem('pawwalk_modiin_myId') || null;
+}
+
+/* ═══════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════ */
+function navigate(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  S.screen = screen;
+  window.scrollTo(0, 0);
+  if (screen === 'map') {
+    setTimeout(initMap, 60);
+    fetchWalkers().then(w => { if (w) { S.walkers = w; if (S.map) renderMarkers(); } });
+  }
+  if (screen === 'dashboard') renderDashboard();
+  // Clear login errors when navigating away
+  if (screen !== 'login') { const e = document.getElementById('login-error'); if(e) e.style.display='none'; }
+}
+
+function chooseRole(role) {
+  S.role = role;
+  document.body.className = role === 'owner' ? 'role-owner' : 'role-walker';
+  if (role === 'owner') { navigate('map'); }
+  else { navigate('walker-gate'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════════════ */
+function initMap() {
+  if (S.map) { S.map.invalidateSize(); renderMarkers(); return; }
+  S.map = L.map('map', { zoomControl: true }).setView([MODIN.lat, MODIN.lng], MODIN.zoom);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }).addTo(S.map);
+
+  // Cluster group — merges nearby pins automatically
+  S.clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 60,
+    showCoverageOnHover: false,
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      const size = count < 5 ? 38 : count < 15 ? 46 : 54;
+      return L.divIcon({
+        html: `<div class="cluster-icon" style="width:${size}px;height:${size}px">${count}<span>walkers</span></div>`,
+        className: '',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
+      });
+    }
+  });
+  S.map.addLayer(S.clusterGroup);
+
+  renderMarkers();
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+        radius: 9, color: '#fff', weight: 3,
+        fillColor: '#3B82F6', fillOpacity: 1
+      }).addTo(S.map).bindPopup('<strong style="font-family:Inter,sans-serif">📍 Your location</strong>');
+    }, ()=>{});
+  }
+}
+
+function renderMarkers() {
+  S.clusterGroup.clearLayers();
+  S.markers = [];
+  const filtered = applyFilters(S.walkers);
+
+  // Update navbar badge
+  const badge = document.getElementById('walker-count-badge');
+  if (badge) badge.textContent = `${filtered.length} walker${filtered.length !== 1 ? 's' : ''}`;
+
+  const countEl = document.getElementById('filter-count');
+  if (S.filters.days.length > 0 || S.filters.maxRate < 200 || S.filters.sizes.length < 3) {
+    countEl.style.display = 'inline-flex';
+    countEl.textContent = `${filtered.length} of ${S.walkers.length} shown`;
+  } else {
+    countEl.style.display = 'none';
+  }
+
+  filtered.forEach(w => {
+    const icon = L.divIcon({
+      html: `<div class="map-pin"><div class="map-pin-head green"><div class="map-pin-head-inner">🐾</div></div><div class="map-pin-tail"></div></div>`,
+      className: '',
+      iconSize: [38, 48],
+      iconAnchor: [19, 48],
+      popupAnchor: [0, -50]
+    });
+    const marker = L.marker([w.lat, w.lng], { icon })
+      .bindPopup(buildPopup(w), { maxWidth: Math.min(300, window.innerWidth - 50), minWidth: Math.min(260, window.innerWidth - 60) });
+    marker.on('popupopen', () => {
+      setTimeout(() => {
+        const btn = document.querySelector(`[data-open-resume="${w.id}"]`);
+        if (btn) btn.onclick = () => openResume(w.id);
+      }, 50);
+    });
+    S.clusterGroup.addLayer(marker);
+    S.markers.push(marker);
+  });
+}
+
+function buildPopup(w) {
+  const stars = renderStars(w.rating || 4.5);
+  const reviewStr = w.reviews ? `(${w.reviews})` : '';
+  const photoHTML = w.photo
+    ? `<img src="${w.photo}" class="popup-avatar">`
+    : `<div class="popup-avatar-placeholder">🦮</div>`;
+  const availDays = DAYS.filter(d => w.availability[d]).map(d => DAY_SHORT[d]).join(', ');
+  const chips = (w.dogSizes || []).map(s => `<span class="chip">${s}</span>`).join('');
+  const verifiedHTML = `<span class="verified-badge">✓ Listed</span>`;
+  return `<div class="popup">
+    <div class="popup-top">
+      ${photoHTML}
+      <div class="popup-info">
+        <div class="popup-name-row"><span class="popup-name">${w.name}</span>${verifiedHTML}</div>
+        <div class="popup-rate"><span class="shk">₪</span>${w.rate} ${w.rateUnit}</div>
+        <div class="popup-loc">📍 ${w.neighborhood}</div>
+        <div class="popup-stars">${stars}<span style="font-size:0.72rem;color:var(--text-3);margin-left:4px">${w.rating || 4.5} ${reviewStr}</span></div>
+      </div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-bio">${w.bio.substring(0,90)}${w.bio.length > 90 ? '...' : ''}</div>
+      <div class="popup-chips">${chips}</div>
+      <div class="popup-avail">Available: <strong>${availDays || 'Contact for schedule'}</strong></div>
+      <div class="popup-actions">
+        <button class="popup-btn primary" data-open-resume="${w.id}">View Full Resume</button>
+        <button class="popup-btn outline" onclick="window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent('${w.email}'),'_blank')">✉ Email</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderStars(rating) {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    if (i < full) html += '<span class="star" style="color:#F59E0B">★</span>';
+    else if (i === full && half) html += '<span class="star" style="color:#F59E0B">½</span>';
+    else html += '<span class="star" style="color:#D1D5DB">★</span>';
+  }
+  return html;
+}
+
+/* ═══════════════════════════════════════════════════
+   FILTERS
+═══════════════════════════════════════════════════ */
+function applyFilters(walkers) {
+  const f = S.filters;
+  return walkers.filter(w => {
+    if (w.rate > f.maxRate) return false;
+    if (f.days.length > 0 && !f.days.some(d => w.availability[d])) return false;
+    if (f.sizes.length > 0 && !f.sizes.some(s => (w.dogSizes||[]).includes(s))) return false;
+    return true;
+  });
+}
+
+function toggleDay(el) {
+  const day = el.dataset.day;
+  el.classList.toggle('active');
+  const idx = S.filters.days.indexOf(day);
+  if (idx === -1) S.filters.days.push(day);
+  else S.filters.days.splice(idx, 1);
+  if (S.map) renderMarkers();
+}
+
+function toggleSize(el) {
+  const size = el.dataset.size;
+  el.classList.toggle('active');
+  const idx = S.filters.sizes.indexOf(size);
+  if (idx === -1) S.filters.sizes.push(size);
+  else S.filters.sizes.splice(idx, 1);
+  if (S.map) renderMarkers();
+}
+
+function onFilterChange() {
+  const v = document.getElementById('rate-filter').value;
+  document.getElementById('rate-display').innerHTML = `<span class="shk">₪</span>${v}`;
+  S.filters.maxRate = parseInt(v);
+  if (S.map) renderMarkers();
+}
+
+function resetFilters() {
+  S.filters = { days: [], maxRate: 200, sizes: ['small','medium','large'] };
+  document.getElementById('rate-filter').value = 200;
+  document.getElementById('rate-display').innerHTML = '<span class="shk">₪</span>200';
+  document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.size-toggle').forEach(b => b.classList.add('active'));
+  if (S.map) renderMarkers();
+}
+
+/* ═══════════════════════════════════════════════════
+   RESUME MODAL
+═══════════════════════════════════════════════════ */
+function openResume(walkerId) {
+  const w = S.walkers.find(x => x.id === walkerId);
+  if (!w) return;
+  S.activeWalker = w;
+
+  // Hero
+  const photoEl = document.getElementById('modal-photo');
+  const phEl = document.getElementById('modal-placeholder');
+  if (w.photo) { photoEl.src = w.photo; photoEl.style.display = 'block'; phEl.style.display = 'none'; }
+  else { photoEl.style.display = 'none'; phEl.style.display = 'flex'; }
+
+  document.getElementById('modal-name').textContent = w.name;
+  document.getElementById('modal-sub').innerHTML = `<span class="shk">₪</span>${w.rate} ${w.rateUnit} · 📍 ${w.neighborhood}`;
+  document.getElementById('modal-badges').innerHTML =
+    `<span class="hero-badge">✓ Listed on PawWalk Modiin</span>` +
+    (w.certs ? `<span class="hero-badge">🏅 Certified</span>` : '') +
+    (w.experience >= 3 ? `<span class="hero-badge">⭐ Experienced</span>` : '');
+  document.getElementById('modal-stars').innerHTML =
+    renderStars(w.rating || 4.5) +
+    `<span>${w.rating || 4.5} · ${w.reviews || 0} reviews</span>`;
+
+  // Bio
+  document.getElementById('modal-bio').textContent = w.bio;
+
+  // Resume items
+  const items = [];
+  if (w.experience) items.push({icon:'⏱',label:'Experience',val:`${w.experience} year${w.experience !== 1 ? 's' : ''}`});
+  if (w.certs) items.push({icon:'🏅',label:'Certifications',val:w.certs});
+  if (w.skills) items.push({icon:'⭐',label:'Specializations',val:w.skills});
+  if (w.languages) items.push({icon:'🌐',label:'Languages',val:w.languages});
+
+  const riBlock = document.getElementById('resume-rows-block');
+  if (items.length > 0) {
+    riBlock.style.display = 'block';
+    document.getElementById('modal-resume-items').innerHTML = items.map(i =>
+      `<div class="resume-item"><div class="ri-icon">${i.icon}</div><div><div class="ri-label">${i.label}</div><div class="ri-value">${i.val}</div></div></div>`
+    ).join('');
+  } else { riBlock.style.display = 'none'; }
+
+  // Service grid
+  const sizeMap = {small:'🐩 Small',medium:'🐕 Medium',large:'🦮 Large'};
+  document.getElementById('modal-service-grid').innerHTML =
+    `<div class="service-tile"><div class="service-tile-label">Rate</div><div class="service-tile-value"><span class="shk">₪</span>${w.rate} <span style="font-size:0.75rem;font-weight:500;color:var(--text-3)">${w.rateUnit}</span></div></div>` +
+    `<div class="service-tile"><div class="service-tile-label">Max Dogs at Once</div><div class="service-tile-value">${w.maxDogs || 1}</div></div>`;
+  document.getElementById('modal-size-badges').innerHTML =
+    (w.dogSizes || []).map(s => `<span class="size-badge">${sizeMap[s]}</span>`).join('');
+
+  // Availability
+  document.getElementById('modal-avail-row').innerHTML = DAYS.map(d =>
+    `<div class="avail-day ${w.availability[d] ? 'yes' : 'no'}">${DAY_SHORT[d]}</div>`
+  ).join('');
+  document.getElementById('modal-avnote').textContent = w.availNote || '';
+
+  // Reset dog photo
+  const dp = document.getElementById('dog-preview');
+  dp.style.display = 'none'; dp.src = '';
+
+  // WhatsApp button
+  document.getElementById('modal-wa-btn').style.display = w.phone ? 'flex' : 'none';
+
+  document.getElementById('resume-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function maybeCloseModal(e) {
+  if (e.target === document.getElementById('resume-modal')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('resume-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  S.activeWalker = null;
+}
+
+function previewDogPhoto(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('dog-preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function contactEmail() {
+  const w = S.activeWalker;
+  if (!w) return;
+  const body = `Hi ${w.name},\n\nI found your profile on PawWalk Modiin and would love to discuss dog walking services.\n\nPlease let me know your availability and if you have any questions.\n\nThank you!`;
+  const subject = encodeURIComponent("Dog Walking Inquiry — PawWalk Modiin");
+  const bodyEnc = encodeURIComponent(body);
+  const toEnc = encodeURIComponent(w.email);
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${toEnc}&su=${subject}&body=${bodyEnc}`, '_blank');
+}
+
+function contactPhone() {
+  const w = S.activeWalker;
+  if (!w || !w.phone) { showToast('No phone number available'); return; }
+  const clean = w.phone.replace(/\D/g,'').replace(/^0/,'');
+  window.open(`https://wa.me/972${clean}?text=${encodeURIComponent(`Hi ${w.name}! I found you on PawWalk Modiin and I'm interested in your dog walking services 🐾`)}`);
+}
+
+/* ═══════════════════════════════════════════════════
+   SIGNUP FORM
+═══════════════════════════════════════════════════ */
+function previewPhoto(input, id) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => { const img = document.getElementById(id); img.src = e.target.result; img.style.display = 'block'; };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
+  const st = document.getElementById('location-status');
+  st.className = 'loc-status'; st.textContent = '📍 Getting your location...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById('f-lat').value = pos.coords.latitude;
+      document.getElementById('f-lng').value = pos.coords.longitude;
+      st.className = 'loc-status ok';
+      st.textContent = `✅ Location captured (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`;
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+        .then(r => r.json()).then(d => {
+          const h = d.address?.suburb || d.address?.neighbourhood || d.address?.quarter || '';
+          if (h && !document.getElementById('f-neighborhood').value) document.getElementById('f-neighborhood').value = h;
+        }).catch(()=>{});
+    },
+    () => {
+      st.className = 'loc-status err';
+      st.textContent = '⚠️ Could not get location — please type your neighborhood.';
+    }
+  );
+}
+
+async function geocodeNeighborhood(name) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name+", Modi'in Maccabim Re'ut, Israel")}&format=json&limit=1`);
+    const d = await r.json();
+    if (d.length > 0) return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
+  } catch(e) {}
+  return { lat: MODIN.lat + (Math.random()-0.5)*0.03, lng: MODIN.lng + (Math.random()-0.5)*0.03 };
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTH HELPERS
+═══════════════════════════════════════════════════ */
+async function hashPassword(pw) {
+  const data = new TextEncoder().encode(pw);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function togglePw(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (el.type === 'password') { el.type = 'text';  btn.textContent = '🙈'; }
+  else                        { el.type = 'password'; btn.textContent = '👁'; }
+}
+
+async function loginWalker() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pw    = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+
+  if (!email || !pw) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.style.display = 'block'; return;
+  }
+
+  // Refresh from Supabase so we always have the latest accounts
+  const fresh = await fetchWalkers();
+  if (fresh) S.walkers = fresh;
+
+  const walker = S.walkers.find(w => w.email.toLowerCase() === email);
+  if (!walker) {
+    errEl.textContent = 'No account found with that email. Did you mean to create a listing?';
+    errEl.style.display = 'block'; return;
+  }
+  if (!walker.passwordHash) {
+    errEl.textContent = 'This is a demo profile and cannot be signed into. Please create your own listing.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const hash = await hashPassword(pw);
+  if (hash !== walker.passwordHash) {
+    errEl.textContent = 'Incorrect password. Please try again.';
+    errEl.style.display = 'block'; return;
+  }
+
+  errEl.style.display = 'none';
+  S.myId = walker.id;
+  localStorage.setItem('pawwalk_modiin_myId', walker.id);
+  document.getElementById('login-password').value = '';
+  showToast('👋 Welcome back, ' + walker.name.split(' ')[0] + '!');
+  navigate('dashboard');
+}
+
+async function submitWalker() {
+  const first = document.getElementById('f-firstname').value.trim();
+  const last  = document.getElementById('f-lastname').value.trim();
+  const email = document.getElementById('f-email').value.trim().toLowerCase();
+  const bio   = document.getElementById('f-bio').value.trim();
+  const rate  = document.getElementById('f-rate').value.trim();
+  const hood  = document.getElementById('f-neighborhood').value.trim();
+  const pw    = document.getElementById('f-password').value;
+  const pw2   = document.getElementById('f-password2').value;
+  const errEl = document.getElementById('form-error');
+
+  // Validate required fields
+  if (!first || !last || !email || !bio || !rate || !hood || !pw) {
+    errEl.textContent = '⚠️ Please fill in all required fields marked with *';
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+  if (pw.length < 6) {
+    errEl.textContent = '⚠️ Password must be at least 6 characters.';
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+  if (!pw2 || pw !== pw2) {
+    errEl.textContent = '⚠️ Passwords do not match.';
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+
+  // Block duplicate emails (skip own record when editing)
+  const existingEmail = S.walkers.find(w => w.email.toLowerCase() === email && w.id !== S.myId);
+  if (existingEmail) {
+    errEl.textContent = '⚠️ An account with this email already exists. Sign in instead.';
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+
+  errEl.style.display = 'none';
+
+  const passwordHash = await hashPassword(pw);
+
+  let lat = parseFloat(document.getElementById('f-lat').value);
+  let lng = parseFloat(document.getElementById('f-lng').value);
+  if (!lat || !lng) { const c = await geocodeNeighborhood(hood); lat = c.lat; lng = c.lng; }
+
+  let photo = '';
+  const file = document.getElementById('f-photo').files[0];
+  if (file) photo = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); });
+  else if (S.myId) {
+    // Keep existing photo when editing if no new one chosen
+    const existing = S.walkers.find(w => w.id === S.myId);
+    if (existing) photo = existing.photo || '';
+  }
+
+  const dogSizes = ['small','medium','large'].filter(s => document.getElementById('sz-'+s).checked);
+  const availability = {};
+  DAYS.forEach(d => { availability[d] = document.getElementById('av-'+d).checked; });
+
+  const walker = {
+    id: S.myId || ('walker_' + Date.now()),
+    name: first + ' ' + last,
+    email, phone: document.getElementById('f-phone').value.trim(),
+    bio, experience: parseInt(document.getElementById('f-experience').value) || 0,
+    certs: document.getElementById('f-certs').value.trim(),
+    skills: document.getElementById('f-skills').value.trim(),
+    languages: document.getElementById('f-languages').value.trim(),
+    rate: parseInt(rate), rateUnit: document.getElementById('f-rate-unit').value,
+    maxDogs: parseInt(document.getElementById('f-maxdogs').value) || 1,
+    photo, neighborhood: hood, lat, lng, availability,
+    availNote: document.getElementById('f-avnote').value.trim(),
+    dogSizes, passwordHash,
+    rating: 5.0, reviews: 0, createdAt: Date.now()
+  };
+
+  try {
+    await upsertWalker(walker);
+  } catch(e) {
+    errEl.textContent = '⚠️ Could not save: ' + e.message;
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+  S.walkers = S.walkers.filter(w => w.id !== walker.id);
+  S.walkers.push(walker);
+  S.myId = walker.id;
+  localStorage.setItem('pawwalk_modiin_myId', walker.id);
+
+  showToast('🐾 You\'re live on the map!');
+  navigate('dashboard');
+}
+
+/* ═══════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════ */
+function renderDashboard() {
+  const w = S.walkers.find(x => x.id === S.myId);
+  if (!w) { navigate('signup'); return; }
+
+  const photoEl = document.getElementById('dash-photo');
+  const phEl = document.getElementById('dash-placeholder');
+  if (w.photo) { photoEl.src = w.photo; photoEl.style.display = 'block'; phEl.style.display = 'none'; }
+  else { photoEl.style.display = 'none'; phEl.style.display = 'flex'; }
+
+  document.getElementById('dash-name').textContent = w.name;
+  document.getElementById('dash-meta').innerHTML = `<span class="shk">₪</span>${w.rate} ${w.rateUnit} · 📍 ${w.neighborhood}`;
+
+  const badges = [];
+  if (w.experience >= 3) badges.push('⭐ Experienced');
+  if (w.certs) badges.push('🏅 Certified');
+  badges.push('🟢 Live on map');
+  document.getElementById('dash-badges').innerHTML = badges.map(b => `<span class="p-badge">${b}</span>`).join('');
+
+  const availDays = DAYS.filter(d => w.availability[d]).length;
+  document.getElementById('dash-stats').innerHTML =
+    `<div class="profile-stat"><div class="profile-stat-num">${w.experience || 0}</div><div class="profile-stat-label">Yrs Exp.</div></div>` +
+    `<div class="profile-stat"><div class="profile-stat-num">${availDays}</div><div class="profile-stat-label">Days Avail.</div></div>` +
+    `<div class="profile-stat"><div class="profile-stat-num"><span class="shk">₪</span>${w.rate}</div><div class="profile-stat-label">${w.rateUnit}</div></div>`;
+}
+
+function editMyProfile() {
+  const w = S.walkers.find(x => x.id === S.myId);
+  if (!w) return;
+  navigate('signup');
+  setTimeout(() => {
+    const parts = w.name.split(' ');
+    document.getElementById('f-firstname').value = parts[0] || '';
+    document.getElementById('f-lastname').value = parts.slice(1).join(' ') || '';
+    document.getElementById('f-email').value = w.email || '';
+    document.getElementById('f-phone').value = w.phone || '';
+    document.getElementById('f-bio').value = w.bio || '';
+    document.getElementById('f-experience').value = w.experience || '';
+    document.getElementById('f-certs').value = w.certs || '';
+    document.getElementById('f-skills').value = w.skills || '';
+    document.getElementById('f-languages').value = w.languages || '';
+    document.getElementById('f-rate').value = w.rate || '';
+    document.getElementById('f-rate-unit').value = w.rateUnit || 'per hour';
+    document.getElementById('f-maxdogs').value = w.maxDogs || '';
+    document.getElementById('f-neighborhood').value = w.neighborhood || '';
+    document.getElementById('f-lat').value = w.lat || '';
+    document.getElementById('f-lng').value = w.lng || '';
+    document.getElementById('f-avnote').value = w.availNote || '';
+    DAYS.forEach(d => { document.getElementById('av-'+d).checked = !!w.availability[d]; });
+    ['small','medium','large'].forEach(s => { document.getElementById('sz-'+s).checked = (w.dogSizes||[]).includes(s); });
+    if (w.photo) { const img = document.getElementById('profile-preview'); img.src = w.photo; img.style.display = 'block'; }
+    // Clear password fields — must re-enter to save changes
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-password2').value = '';
+  }, 100);
+}
+
+async function removeListing() {
+  if (!confirm('Remove your listing from the map? You can re-add it anytime.')) return;
+  await deleteWalker(S.myId);
+  S.walkers = S.walkers.filter(w => w.id !== S.myId);
+  S.myId = null;
+  localStorage.removeItem('pawwalk_modiin_myId');
+  showToast('Listing removed');
+  navigate('landing');
+}
+
+/* ═══════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   SHARE
+═══════════════════════════════════════════════════ */
+function shareProfile() {
+  const panel = document.getElementById('share-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function buildShareText() {
+  const w = S.walkers.find(x => x.id === S.myId);
+  if (!w) return '';
+  const days = DAYS.filter(d => w.availability[d]).map(d => DAY_FULL[d]).join(', ');
+  const sizes = (w.dogSizes || []).join(', ');
+  return [
+    `🐾 *${w.name}* — Dog Walker in ${w.neighborhood}, Modi'in`,
+    ``,
+    `💰 ₪${w.rate} ${w.rateUnit}`,
+    `📅 Available: ${days || 'Flexible'}`,
+    `🐕 Accepts: ${sizes}`,
+    ``,
+    w.bio.substring(0, 180) + (w.bio.length > 180 ? '...' : ''),
+    ``,
+    w.certs ? `🏅 ${w.certs}` : '',
+    w.experience ? `⏱ ${w.experience} years experience` : '',
+    ``,
+    `📧 ${w.email}`,
+    w.phone ? `📞 ${w.phone}` : '',
+    ``,
+    `_Found on PawWalk Modiin — Modi'in Dog Walking Marketplace_`
+  ].filter(Boolean).join('\n');
+}
+
+function shareViaWhatsApp() {
+  const text = buildShareText();
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+async function copyProfileCard() {
+  const text = buildShareText();
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ Profile card copied to clipboard!');
+  } catch(e) {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ Profile card copied to clipboard!');
+  }
+  document.getElementById('share-panel').style.display = 'none';
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ═══════════════════════════════════════════════════
+   TRANSLATIONS
+═══════════════════════════════════════════════════ */
+const TRANS = {
+  en: {
+    heroTag: "🐾 Modi'in Maccabim Re'ut · Trusted Dog Walking",
+    heroH1: "Find a trusted walker<br>for your <span>best friend</span>",
+    heroP: "Connect with verified, experienced dog walkers in your neighborhood — or offer your services to dog owners nearby.",
+    ownerCardH3: "I need a dog walker",
+    ownerCardP: "Browse walkers on a live map, read their full resume, and contact them instantly.",
+    ownerCardArrow: "Find walkers →",
+    walkerCardH3: "I'm a dog walker",
+    walkerCardP: "Post your profile, set your rates and availability, and get discovered by local dog owners.",
+    walkerCardArrow: "Post my services →",
+    browseMap: "🗺️ Just browse the map first",
+    stat1Label: "Active walkers",
+    stat2Label: "Area coverage",
+    stat3Label: "Typical rates",
+    stat4Label: "To list & browse",
+    featuresTitle: "Everything you need",
+    featuresSub: "Simple, local, and free for everyone in Modi'in.",
+    filterDay: "Day",
+    filterBudget: "Budget",
+    filterSize: "Size",
+    daySun: "Sun", dayMon: "Mon", dayTue: "Tue", dayWed: "Wed",
+    dayThu: "Thu", dayFri: "Fri", daySat: "Sat",
+    navHome: "← Home",
+    navBack: "← Back",
+    gateTitle: "Dog Walker Portal",
+    gateSub: "New here? Create your free listing. Already signed up? Sign back in to manage your profile.",
+    gateCreate: "Create My Listing",
+    gateCreateSub: "New to PawWalk Modiin — set up your walker profile",
+    gateSignIn: "Sign In to My Account",
+    gateSignInSub: "Already listed — edit or manage my profile",
+    loginTitle: "🔑 Welcome back",
+    loginSub: "Sign in with the email and password you used when you created your listing.",
+    loginBtn: "Sign In →",
+    loginSwitch: "New here? Create a listing instead",
+    dashTitle: "My Walker Profile",
+    dashLive: "You're live on the map 🟢",
+    dashManage: "Manage Your Listing",
+    dashViewMap: "View My Pin on the Map",
+    dashEdit: "Edit My Profile",
+    dashShare: "Share My Profile",
+    dashRemove: "Remove My Listing",
+    modalContact: "📬 Contact This Walker",
+    modalDogPhoto: "Add a photo of your dog (optional)",
+    modalEmail: "✉️ Send Email",
+    modalClose: "Close",
+    langFab: "🌐 עברית",
+  },
+  he: {
+    heroTag: "🐾 מודיעין מכבים רעות · שירות הולכת כלבים",
+    heroH1: "מצאו מוביל כלבים אמין<br>ל<span>חבר הטוב שלכם</span>",
+    heroP: "התחברו עם מובילי כלבים מנוסים ומוכרים בשכונה שלכם — או הציעו את שירותיכם לבעלי כלבים באזור.",
+    ownerCardH3: "אני צריך מוביל כלבים",
+    ownerCardP: "עיינו במובילים על מפה חיה, קראו את הפרופיל המלא שלהם וצרו קשר מיידית.",
+    ownerCardArrow: "← מצא מובילים",
+    walkerCardH3: "אני מוביל כלבים",
+    walkerCardP: "פרסמו את הפרופיל שלכם, קבעו מחירים וזמינות, והיגלו על ידי בעלי כלבים מקומיים.",
+    walkerCardArrow: "← פרסם את השירותים שלי",
+    browseMap: "🗺️ עיין במפה תחילה",
+    stat1Label: "מובילים פעילים",
+    stat2Label: "אזור כיסוי",
+    stat3Label: "מחירים טיפוסיים",
+    stat4Label: "חינם לפרסום",
+    featuresTitle: "כל מה שצריך",
+    featuresSub: "פשוט, מקומי, וחינמי לכולם במודיעין.",
+    filterDay: "יום",
+    filterBudget: "תקציב",
+    filterSize: "גודל",
+    daySun: "א׳", dayMon: "ב׳", dayTue: "ג׳", dayWed: "ד׳",
+    dayThu: "ה׳", dayFri: "ו׳", daySat: "ש׳",
+    navHome: "בית ←",
+    navBack: "חזור ←",
+    gateTitle: "פורטל מובילי כלבים",
+    gateSub: "חדשים? צרו מודעה חינמית. כבר נרשמתם? התחברו לניהול הפרופיל שלכם.",
+    gateCreate: "יצירת מודעה",
+    gateCreateSub: "חדשים ב-PawWalk Modiin — צרו פרופיל מוביל כלבים",
+    gateSignIn: "כניסה לחשבון שלי",
+    gateSignInSub: "כבר רשומים — ערכו או נהלו את הפרופיל שלכם",
+    loginTitle: "🔑 ברוכים השבים",
+    loginSub: "התחברו עם האימייל והסיסמה שבחרתם בעת יצירת המודעה.",
+    loginBtn: "כניסה ←",
+    loginSwitch: "חדשים? צרו מודעה במקום",
+    dashTitle: "פרופיל המוביל שלי",
+    dashLive: "אתם פעילים על המפה 🟢",
+    dashManage: "ניהול המודעה שלי",
+    dashViewMap: "הצג את הסיכה שלי על המפה",
+    dashEdit: "ערוך את הפרופיל שלי",
+    dashShare: "שתף את הפרופיל שלי",
+    dashRemove: "הסר את המודעה שלי",
+    modalContact: "📬 צור קשר עם המוביל",
+    modalDogPhoto: "הוסף תמונה של הכלב שלך (אופציונלי)",
+    modalEmail: "✉️ שלח אימייל",
+    modalClose: "סגור",
+    langFab: "🌐 English",
+  }
+};
+
+function t(key) {
+  return (TRANS[S.lang] && TRANS[S.lang][key]) || (TRANS.en[key]) || key;
+}
+
+function applyTranslations() {
+  const isHe = S.lang === 'he';
+  document.documentElement.lang = S.lang;
+  document.documentElement.dir = isHe ? 'rtl' : 'ltr';
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    // Use innerHTML for keys that may contain HTML tags
+    if (['heroTag','heroH1','heroP','ownerCardP','walkerCardP'].includes(key)) {
+      el.innerHTML = val;
+    } else {
+      el.textContent = val;
+    }
+  });
+
+  // Update lang FAB
+  const fab = document.getElementById('lang-fab');
+  if (fab) fab.textContent = t('langFab');
+
+  // Re-render markers if map is open (updates popups)
+  if (S.map && S.screen === 'map') renderMarkers();
+}
+
+function toggleLang() {
+  S.lang = S.lang === 'en' ? 'he' : 'en';
+  applyTranslations();
+}
+
+/* ── DISCLAIMER ── */
+function acceptDisclaimer() {
+  document.getElementById('disclaimer-overlay').style.display = 'none';
+  localStorage.setItem('pawwalk_modiin_accepted', '1');
+}
+
+/* ── INIT ── */
+initStorage(); // async — loads walkers from Supabase in background
+applyTranslations();
+if (!localStorage.getItem('pawwalk_modiin_accepted')) {
+  document.getElementById('disclaimer-overlay').style.display = 'flex';
+} else {
+  document.getElementById('disclaimer-overlay').style.display = 'none';
+}
+</script>
+</body>
+</html>
